@@ -176,4 +176,8 @@ end
 
 LoadModes()
 
+if SERVER then
+	zb.RerollChances()
+end
+
 print("Z-City modes loaded!")

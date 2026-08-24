@@ -655,11 +655,53 @@ function MODE:Intermission()
 
 	local _, CROUND = CurrentRound()
 
-	if not CROUND or CROUND == "hmcd" then
-		CROUND = table.Random(self:SubModes())
+	-- Determine sub-mode: use scheduled sub-mode from round system (zb.CROUND),
+	-- otherwise pick via weighted ChanceFunction from MODE.Types
+	local subModes = self.Types
+	local selectedSubMode = nil
+
+	-- If round system scheduled a valid sub-mode for this mode, use it
+	if CROUND and subModes[CROUND] then
+		selectedSubMode = CROUND
+	else
+		-- Weighted random selection based on ChanceFunction
+		local choices = {}
+		local totalWeight = 0
+		for name, data in pairs(subModes) do
+			local weight = 0
+			if data.ChanceFunction then
+				local ok, w = pcall(data.ChanceFunction)
+				if ok and isnumber(w) then weight = w end
+			elseif data.Chance then
+				weight = data.Chance
+			end
+			if weight > 0 then
+				table.insert(choices, {name = name, weight = weight})
+				totalWeight = totalWeight + weight
+			end
+		end
+
+		if #choices > 0 then
+			local rand = math.random() * totalWeight
+			local accum = 0
+			for _, choice in ipairs(choices) do
+				accum = accum + choice.weight
+				if rand <= accum then
+					selectedSubMode = choice.name
+					break
+				end
+			end
+			-- Fallback to first choice if something went wrong
+			if not selectedSubMode then selectedSubMode = choices[1].name end
+		else
+			-- Ultimate fallback
+			selectedSubMode = "standard"
+		end
 	end
 
-	self.Type = CROUND
+	self.Type = selectedSubMode
+	print("[Z-City] hmcd 子模式: " .. selectedSubMode)
+	
 	local player_count = 0
 
 	for k, ply in player.Iterator() do

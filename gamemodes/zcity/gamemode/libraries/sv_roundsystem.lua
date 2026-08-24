@@ -263,6 +263,7 @@ if zb.END_TIME < CurTime() then
 					ErrorNoHalt("[Z-City] 转场钩子报错(已忽略，继续切换): " .. tostring(errHook) .. "\n")
 				end
 
+				print("[Z-City] 转场清理: 正在重置所有玩家模式状态...")
 				-- === 全量清理旧模式的玩家状态（必须在切换 CROUND 之前）===
 				for _, ply in player.Iterator() do
 					if not IsValid(ply) then continue end
@@ -288,6 +289,7 @@ if zb.END_TIME < CurTime() then
 					-- TDM / 通用金钱
 					ply:SetNWInt("TDM_Money", 0)
 				end
+				print("[Z-City] 转场清理: 完成")
 				-- 清理旧模式的 saved 表（防止数据跨回合泄漏）
 				local oldMode = zb.modes[zb.CROUND_MAIN] or zb.modes[zb.CROUND]
 				if oldMode and oldMode.saved then
@@ -481,34 +483,18 @@ function zb.GetAvailableModes()
 	local newtbl = {}
 
 	for i, name in pairs(zb.GetModes()) do
-
 		local tbl = zb.modes[name]
-		if zb.IsMapAllowed(tbl) and (tbl.CanLaunch and tbl:CanLaunch()) and
-		(
-			( not tbl.ForBigMaps ) or
-			( zb.GetWorldSize() > ZBATTLE_BIGMAP )
-		) then
-			if tbl.SubModes then
-				for i, name2 in pairs(tbl:SubModes()) do
-					table.insert(newtbl, name2)
-				end
-			else
-				table.insert(newtbl, name)
-			end
+		if zb.IsMapAllowed(tbl) and (tbl.CanLaunch and tbl:CanLaunch()) then
+			-- Return MAIN mode keys only. Sub-modes are selected internally by each mode's Intermission()
+			-- using their own Chance/ChanceFunction weights. This ensures main mode variety.
+			table.insert(newtbl, name)
 		end
 	end
 
-	-- Fallback: if random pool has < 2 modes, ensure hmcd is available to avoid
-	-- "same mode every round" on small maps where ForBigMaps modes are filtered out.
-	if #newtbl < 2 then
-		print("[Z-City] 警告: 可用随机模式少于 2 个 (" .. #newtbl .. ")，强制加入 hmcd 保证多样性")
-		if not table.HasValue(newtbl, "hmcd") and zb.modes.hmcd then
-			table.insert(newtbl, "hmcd")
-		end
-		-- If still only 1 mode, duplicate it to keep weighted random working
-		if #newtbl < 2 and newtbl[1] then
-			table.insert(newtbl, newtbl[1])
-		end
+	-- Fallback: if only 1 main mode available, duplicate it to keep weighted random working
+	if #newtbl < 2 and newtbl[1] then
+		print("[Z-City] 警告: 仅 1 个可用主模式 (" .. newtbl[1] .. ")，复制以保证随机运行")
+		table.insert(newtbl, newtbl[1])
 	end
 
 	return newtbl
