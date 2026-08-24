@@ -278,6 +278,7 @@ function MODE:GiveEquipment()
 	saved.martialLaw = false
 	saved.curfew = false
 	saved.commander = nil
+	saved.commanderAssigned = nil
 	saved.Roles = {}
 	saved.checkpoints = {}
 	saved.nextSupplyDrop = MODE.Config.SupplyDropInterval > 0 and CurTime() + MODE.Config.SupplyDropInterval or math.huge
@@ -325,6 +326,7 @@ function MODE:GiveEquipment()
 	if MODE.Config.CommanderEnabled and #guards > 0 then
 		saved.commander = PickCommander(guards)
 		saved.commander:SetNWBool("IsCommander", true)
+		saved.commanderAssigned = true
 	end
 
 	local roles = {"guardsman", "medic", "engineer", "marksman"}
@@ -429,7 +431,7 @@ function MODE:RoundThink()
 	saved.phase1End = saved.phase1End or math.huge
 	if saved.winner then return end
 
-	if MODE.Config.CommanderEnabled and (not IsValid(saved.commander) or not saved.commander:Alive()) then
+	if MODE.Config.CommanderEnabled and saved.commanderAssigned and (not IsValid(saved.commander) or not saved.commander:Alive()) then
 		saved.winner = 0
 		PrintMessage(HUD_PRINTTALK, "[国民警卫队] 指挥官阵亡，暴徒获胜！")
 		return
@@ -478,9 +480,9 @@ function MODE:ShouldRoundEnd()
 	self.saved = saved
 	if saved.winner then return true end
 
-	if MODE.Config.CommanderEnabled and (not IsValid(saved.commander) or not saved.commander:Alive()) then return true end
-	if #AlivePlayersOnTeam(0) == 0 then return true end
-	if CurTime() >= saved.phase1End then return true end
+	if MODE.Config.CommanderEnabled and saved.commanderAssigned and (not IsValid(saved.commander) or not saved.commander:Alive()) then return true end
+	if #AlivePlayersOnTeam(0) == 0 and saved.commanderAssigned then return true end
+	if saved.phase1End and CurTime() >= saved.phase1End then return true end
 	if saved.riotLevel >= MODE.Config.RiotLevelThreshold then return true end
 
 	return false

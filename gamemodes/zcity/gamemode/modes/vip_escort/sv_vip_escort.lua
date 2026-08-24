@@ -369,6 +369,7 @@ function MODE:RoundStart()
 		local guards = AlivePlayersOnTeam(1)
 		if #guards > 0 then
 			saved.VIP = guards[math.random(#guards)]
+			saved.vipAssigned = true
 			SetVIPRole(saved.VIP, "vip", "VIP 目标", Color(255, 215, 0))
 		else
 			saved.winner = 0
@@ -470,7 +471,7 @@ function MODE:ShouldRoundEnd()
 	if saved.winner then return true end
 
 	local vip = saved.VIP
-	if not IsValid(vip) or not vip:Alive() then
+	if saved.vipAssigned and (not IsValid(vip) or not vip:Alive()) then
 		saved.winner = 0
 		return true
 	end

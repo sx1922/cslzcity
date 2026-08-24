@@ -142,6 +142,10 @@ function zb:ShouldRoundEnd()
 	local time = zb.ROUND_TIME
 	local mode = CurrentRound()
 	if not mode then return false end
+
+	-- 开局宽限期：等待异步出生/角色分配完成，避免空队伍在开局瞬间被误判为回合结束
+	if zb.LAST_ROUNDSTART_TIME and (CurTime() - zb.LAST_ROUNDSTART_TIME) < 3 then return false end
+
 	local shouldroundend = mode.ShouldRoundEnd and mode:ShouldRoundEnd()
 	if shouldroundend ~= false then
 		local boringround = (zb.ROUND_START + time) < CurTime()
@@ -628,6 +632,7 @@ function zb:RoundStart()
 	if mode.shouldfreeze then zb:Unfreeze() end
 
 	zb.ROUND_STATE = 1
+	zb.LAST_ROUNDSTART_TIME = CurTime()
 	zb.START_TIME = nil
 
 	local mode, round = CurrentRound()
