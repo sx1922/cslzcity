@@ -216,8 +216,14 @@ function zb:EndRoundThink()
 
 			zb.SHOULD_FADE = true
 
-			hook.Run("ZB_PreRoundStart")
-			hook.Run("TTTPrepareRound") -- stormfox2 random_round_weather
+			-- 插件钩子可能报错（TTT 类插件常挂 TTTPrepareRound），不能让它中断模式切换链
+			local okHook, errHook = pcall(function()
+				hook.Run("ZB_PreRoundStart")
+				hook.Run("TTTPrepareRound") -- stormfox2 random_round_weather
+			end)
+			if not okHook then
+				ErrorNoHalt("[Z-City] 转场钩子报错(已忽略，继续切换): " .. tostring(errHook) .. "\n")
+			end
 
 			local prevRound = zb.CROUND
 			zb.CROUND = zb.nextround or "hmcd"
@@ -245,10 +251,16 @@ function zb:EndRoundThink()
 				net.WriteInt(zb.ROUND_STATE, 4)
 			net.Broadcast()
 
-			hg.UpdateRoundTime(mode.ROUND_TIME, CurTime(), CurTime() + (mode.start_time or 5))
+			local okURT, errURT = pcall(hg.UpdateRoundTime, mode.ROUND_TIME, CurTime(), CurTime() + (mode.start_time or 5))
+			if not okURT then ErrorNoHalt("[Z-City] UpdateRoundTime 报错: " .. tostring(errURT) .. "\n") end
 
-			self:KillPlayers()
-			self:AutoBalance()
+			-- KillPlayers/AutoBalance 任一报错都不允许跳过 Intermission/GiveEquipment，
+			-- 否则新模式的队伍/角色永远分配不到，宽限期后就会被误判为回合结束
+			local okKP, errKP = pcall(self.KillPlayers, self)
+			if not okKP then ErrorNoHalt("[Z-City] KillPlayers 报错: " .. tostring(errKP) .. "\n") end
+
+			local okAB, errAB = pcall(self.AutoBalance, self)
+			if not okAB then ErrorNoHalt("[Z-City] AutoBalance 报错: " .. tostring(errAB) .. "\n") end
 
 			if hg.PluvTown.Active then
 				for _, ply in player.Iterator() do
