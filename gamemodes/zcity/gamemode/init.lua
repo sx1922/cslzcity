@@ -441,13 +441,14 @@ function GM:PlayerInitialSpawn(ply)
 	end
 end
 
--- 引擎菜单按键(F1-F4)转发给当前模式：tdm 的 F1 购买菜单此前从未被调用过
+-- 引擎菜单按键转发给当前模式：F1=帮助 F2=队伍 F3=商店(tdm购买菜单) F4=备用
+-- 用 hook 而非 GM 方法，防止其他插件覆盖 GAMEMODE.ShowSpareX 后商店再次失效
 local spareForwards = { "ShowHelp", "ShowTeam", "ShowSpare1", "ShowSpare2" }
 for _, fname in ipairs(spareForwards) do
-	GM[fname] = function(self, ply)
+	hook.Add(fname, "ZC_ForwardToMode_" .. fname, function(ply)
 		local m = CurrentRound()
 		if m and m[fname] then return m[fname](m, ply) end
-	end
+	end)
 end
 
 function GM:IsSpawnpointSuitable( pl, spawnpointent, bMakeSuitable )
