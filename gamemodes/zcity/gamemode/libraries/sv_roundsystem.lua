@@ -25,6 +25,18 @@ function zb:GetMode(round)
 	return zb.modes.hmcd and "hmcd" or next(zb.modes)
 end
 
+-- GetMode intentionally has a safe fallback for the round loop. Selection
+-- and admin commands need a strict check, otherwise a typo silently resolves
+-- to homicide and makes a requested mode appear to have no effect.
+function zb:IsKnownModeKey(round)
+	if not isstring(round) or round == "" then return false end
+	if zb.modes[round] then return true end
+	for _, mode in pairs(zb.modes) do
+		if mode.Types and mode.Types[round] then return true end
+	end
+	return false
+end
+
 -- 模式可通过 MODE.AllowedMaps = { ["地图名"] = true, ... } 限定仅在特定地图启动
 -- 空表或未定义 = 不限制地图
 function zb.IsMapAllowed(mode)
@@ -38,6 +50,8 @@ function CurrentRound()
 	if IsValid(ents.FindByClass( "trigger_changelevel" )[1]) then
 		zb.nextround = "coop"
 		zb.CROUND = zb.CROUND or "coop"
+		zb.CROUND_MAIN = "coop"
+		zb.LASTCROUND = "coop"
 		return zb.modes["coop"] or zb.modes["hmcd"], zb.CROUND
 	end
 
@@ -61,19 +75,26 @@ function CurrentRound()
 	return mode, zb.CROUND
 end
 
-function NextRound(round)
+function NextRound(round, internal)
 	if IsValid(ents.FindByClass( "trigger_changelevel" )[1]) then
 		zb.nextround = "coop"
+		if not internal then zb.manualNextRound = "coop" end
+		return true
 	else
-		local resolved = round and zb:GetMode(round)
-		if not resolved then
-			print("[Z-City] ignored invalid next mode: " .. tostring(round))
-			zb.nextround = "hmcd"
-			return
+		if round == "random" then
+			if not internal then zb.manualNextRound = nil end
+			return false
 		end
-		-- Keep sub-mode keys (for example homicide/hideout) intact; GetMode
-		-- resolves them to their owning mode when the round starts.
-		zb.nextround = round
+		local resolved = round and zb:GetMode(round)
+		if not resolved or not zb:IsKnownModeKey(round) then
+			print("[Z-City] ignored invalid next mode: " .. tostring(round))
+			return false
+		end
+		-- Store the resolved MAIN mode key (e.g., "hmcd" not "standard") so
+		-- transition logic in EndRoundThink doesn't get confused by sub-mode keys.
+		zb.nextround = resolved
+		if not internal then zb.manualNextRound = resolved end
+		return true
 	end
 end
 
@@ -122,7 +143,12 @@ function zb:EndRound()
 	net.Broadcast()
 
 	--PrintMessage(HUD_PRINTTALK, "Раунд закончен.")
-	if mode.EndRound then mode:EndRound() end
+	if mode.EndRound then
+		local ok, err = pcall(mode.EndRound, mode)
+		if not ok then
+			ErrorNoHalt("[Z-City] " .. tostring(mode.name) .. " EndRound failed: " .. tostring(err) .. "\n")
+		end
+	end
 	hook.Run("ZB_EndRound")
 	zb.AddFade()
 
@@ -148,12 +174,14 @@ end
 zb.ROUND_TIME = zb.ROUND_TIME or 300
 
 function zb:ShouldRoundEnd()
-	local time = zb.ROUND_TIME
+	local time = tonumber(zb.ROUND_TIME) or 300
 	local mode = CurrentRound()
 	if not mode then return false end
 
 	-- 开局宽限期：等待异步出生/角色分配完成，避免空队伍在开局瞬间被误判为回合结束
-	if zb.LAST_ROUNDSTART_TIME and (CurTime() - zb.LAST_ROUNDSTART_TIME) < 3 then return false end
+	-- 可由模式通过 mode.GracePeriod 覆盖（默认 3 秒，homicide 建议 10+ 秒）
+	local gracePeriod = (mode.GracePeriod and tonumber(mode.GracePeriod)) or 3
+	if zb.LAST_ROUNDSTART_TIME and (CurTime() - zb.LAST_ROUNDSTART_TIME) < gracePeriod then return false end
 
 	-- pcall 保护：模式判定报错时不再每 tick 刷错，回退为超时兜底（与未定义时的原行为一致）
 	local ok, shouldroundend = true, nil
@@ -166,7 +194,8 @@ function zb:ShouldRoundEnd()
 	end
 
 	if shouldroundend ~= false then
-		local boringround = (zb.ROUND_START + time) < CurTime()
+		local roundStart = tonumber(zb.ROUND_START) or tonumber(zb.LAST_ROUNDSTART_TIME) or CurTime()
+		local boringround = (roundStart + time) < CurTime()
 
 		if shouldroundend or boringround then
 			-- 诊断：打印结束原因与各队存活数，用于排查“自动结束”
@@ -220,83 +249,128 @@ function zb:EndRoundThink()
 			end
 		end
 
-		if zb.END_TIME < CurTime() then
-			zb.ROUND_STATE = 0
+if zb.END_TIME < CurTime() then
+				zb.ROUND_STATE = 0
 
-			zb.SHOULD_FADE = true
+				zb.SHOULD_FADE = true
 
-			-- 插件钩子可能报错（TTT 类插件常挂 TTTPrepareRound），不能让它中断模式切换链
-			local okHook, errHook = pcall(function()
-				hook.Run("ZB_PreRoundStart")
-				hook.Run("TTTPrepareRound") -- stormfox2 random_round_weather
-			end)
-			if not okHook then
-				ErrorNoHalt("[Z-City] 转场钩子报错(已忽略，继续切换): " .. tostring(errHook) .. "\n")
-			end
-
-			local prevRound = zb.CROUND
-			zb.CROUND = zb.nextround or "hmcd"
-			print(string.format("[Z-City] 回合切换: %s -> %s (nextround=%s)", tostring(prevRound), tostring(zb.CROUND), tostring(zb.nextround)))
-			local nextMode = CurrentRound()
-			local fallbackMsg
-			if nextMode and nextMode.CanLaunch then
-				local ok, canLaunch = pcall(nextMode.CanLaunch, nextMode)
-				if not ok or canLaunch == false then
-					fallbackMsg = "[Z-City] 模式 " .. tostring(zb.CROUND) .. " 无法启动（地图点位/人数不满足），已回退到标准模式。"
+				-- 插件钩子可能报错（TTT 类插件常挂 TTTPrepareRound），不能让它中断模式切换链
+				local okHook, errHook = pcall(function()
+					hook.Run("ZB_PreRoundStart")
+					hook.Run("TTTPrepareRound") -- stormfox2 random_round_weather
+				end)
+				if not okHook then
+					ErrorNoHalt("[Z-City] 转场钩子报错(已忽略，继续切换): " .. tostring(errHook) .. "\n")
 				end
-			end
-			-- 地图白名单：模式声明了 AllowedMaps 且当前地图不在名单内时回退
-			if not fallbackMsg and nextMode and not zb.IsMapAllowed(nextMode) then
-				fallbackMsg = "[Z-City] 模式 " .. tostring(zb.CROUND) .. " 不支持当前地图(" .. game.GetMap() .. ")，已回退到标准模式。"
-			end
-			if fallbackMsg then
-				PrintMessage(HUD_PRINTTALK, fallbackMsg)
-				print(fallbackMsg)
-				zb.CROUND = "hmcd"
-				zb.CROUND_MAIN = "hmcd"
-				zb.LASTCROUND = "hmcd"
-				nextMode = zb.modes.hmcd
-			end
-			if nextMode and nextMode.shouldfreeze then zb:Freeze() end
 
-			--PrintMessage(HUD_PRINTTALK, "Gamemode: " .. CurrentRound().PrintName or "None")
-
-			local mode, round = CurrentRound()
-			net.Start("RoundInfo")
-				net.WriteString(mode.name or "hmcd")
-				net.WriteInt(zb.ROUND_STATE, 4)
-			net.Broadcast()
-
-			local okURT, errURT = pcall(hg.UpdateRoundTime, mode.ROUND_TIME, CurTime(), CurTime() + (mode.start_time or 5))
-			if not okURT then ErrorNoHalt("[Z-City] UpdateRoundTime 报错: " .. tostring(errURT) .. "\n") end
-
-			-- KillPlayers/AutoBalance 任一报错都不允许跳过 Intermission/GiveEquipment，
-			-- 否则新模式的队伍/角色永远分配不到，宽限期后就会被误判为回合结束
-			local okKP, errKP = pcall(self.KillPlayers, self)
-			if not okKP then ErrorNoHalt("[Z-City] KillPlayers 报错: " .. tostring(errKP) .. "\n") end
-
-			local okAB, errAB = pcall(self.AutoBalance, self)
-			if not okAB then ErrorNoHalt("[Z-City] AutoBalance 报错: " .. tostring(errAB) .. "\n") end
-
-			if hg.PluvTown.Active then
+				-- === 全量清理旧模式的玩家状态（必须在切换 CROUND 之前）===
 				for _, ply in player.Iterator() do
-					ply:SetNetVar("CurPluv", "pluv")
+					if not IsValid(ply) then continue end
+					-- Homicide / 通用
+					ply.isTraitor = false
+					ply.isPolice = false
+					ply.isGunner = false
+					ply.MainTraitor = false
+					ply.SubRole = nil
+					ply.Profession = nil
+					-- National Guard / Riot / VIP / Maniac
+					ply:SetNWVar("NGRole", "none")
+					ply:SetNWVar("NGTeam", 2)
+					ply:SetNWBool("IsCommander", false)
+					ply:SetNWVar("VIPRole", "none")
+					ply:SetNWVar("ManiacRole", "none")
+					ply:SetNWString("ManiacWeaponClass", "")
+					ply:SetNWInt("Maniac_MaxHealth", 0)
+					ply:SetNWBool("Maniac_NoPush", false)
+					ply:SetNWBool("Maniac_Charging", false)
+					ply:SetNWBool("Arrested", false)
+					ply.NGRioterWeapon = nil
+					-- TDM / 通用金钱
+					ply:SetNWInt("TDM_Money", 0)
 				end
-			end
+				-- 清理旧模式的 saved 表（防止数据跨回合泄漏）
+				local oldMode = zb.modes[zb.CROUND_MAIN] or zb.modes[zb.CROUND]
+				if oldMode and oldMode.saved then
+					oldMode.saved = {}
+				end
 
-			local mode = CurrentRound()
-			if mode then
-				mode.saved = {}
-				if mode.Intermission then
-					local ok, err = pcall(mode.Intermission, mode)
-					if not ok then ErrorNoHalt("[Z-City] " .. tostring(mode.name) .. " Intermission failed: " .. tostring(err) .. "\n") end
+				local prevRound = zb.CROUND
+				local forcedRound = forcemodeconvar:GetString()
+				local selectedRound = (forcedRound ~= "" and forcedRound ~= "random" and forcedRound)
+					or zb.manualNextRound
+					or zb.nextround
+					or "hmcd"
+				if not zb:IsKnownModeKey(selectedRound) then selectedRound = "hmcd" end
+				zb.CROUND_MAIN = nil
+				zb.LASTCROUND = nil
+				zb.CROUND = selectedRound
+				-- Consume the pending selection. RoundStart will schedule the next
+				-- one; retaining this value is what caused the previous mode to be
+				-- selected repeatedly when setup failed.
+				zb.nextround = nil
+				zb.manualNextRound = nil
+				-- A manually selected mode has now been consumed as the active round;
+				-- do not let the next RoundStart select it a second time.
+				print(string.format("[Z-City] 回合切换: %s -> %s (nextround=%s)", tostring(prevRound), tostring(zb.CROUND), tostring(zb.nextround)))
+				local nextMode = CurrentRound()
+				local fallbackMsg
+				if nextMode and nextMode.CanLaunch then
+					local ok, canLaunch = pcall(nextMode.CanLaunch, nextMode)
+					if not ok or canLaunch == false then
+						fallbackMsg = "[Z-City] 模式 " .. tostring(zb.CROUND) .. " 无法启动（地图点位/人数不满足），已回退到标准模式。"
+					end
 				end
-				if mode.GiveEquipment then
-					local ok, err = pcall(mode.GiveEquipment, mode)
-					if not ok then ErrorNoHalt("[Z-City] " .. tostring(mode.name) .. " GiveEquipment failed: " .. tostring(err) .. "\n") end
+				-- 地图白名单：模式声明了 AllowedMaps 且当前地图不在名单内时回退
+				if not fallbackMsg and nextMode and not zb.IsMapAllowed(nextMode) then
+					fallbackMsg = "[Z-City] 模式 " .. tostring(zb.CROUND) .. " 不支持当前地图(" .. game.GetMap() .. ")，已回退到标准模式。"
+				end
+				if fallbackMsg then
+					PrintMessage(HUD_PRINTTALK, fallbackMsg)
+					print(fallbackMsg)
+					zb.CROUND = "hmcd"
+					zb.CROUND_MAIN = "hmcd"
+					zb.LASTCROUND = "hmcd"
+					nextMode = zb.modes.hmcd
+				end
+				if nextMode and nextMode.shouldfreeze then zb:Freeze() end
+
+				--PrintMessage(HUD_PRINTTALK, "Gamemode: " .. CurrentRound().PrintName or "None")
+
+				local mode, round = CurrentRound()
+				net.Start("RoundInfo")
+					net.WriteString(mode.name or "hmcd")
+					net.WriteInt(zb.ROUND_STATE, 4)
+				net.Broadcast()
+
+				local okURT, errURT = pcall(hg.UpdateRoundTime, mode.ROUND_TIME, CurTime(), CurTime() + (mode.start_time or 5))
+				if not okURT then ErrorNoHalt("[Z-City] UpdateRoundTime 报错: " .. tostring(errURT) .. "\n") end
+
+				-- KillPlayers/AutoBalance 任一报错都不允许跳过 Intermission/GiveEquipment，
+				-- 否则新模式的队伍/角色永远分配不到，宽限期后就会被误判为回合结束
+				local okKP, errKP = pcall(self.KillPlayers, self)
+				if not okKP then ErrorNoHalt("[Z-City] KillPlayers 报错: " .. tostring(errKP) .. "\n") end
+
+				local okAB, errAB = pcall(self.AutoBalance, self)
+				if not okAB then ErrorNoHalt("[Z-City] AutoBalance 报错: " .. tostring(errAB) .. "\n") end
+
+				if hg.PluvTown.Active then
+					for _, ply in player.Iterator() do
+						ply:SetNetVar("CurPluv", "pluv")
+					end
+				end
+
+				local mode = CurrentRound()
+				if mode then
+					if mode.Intermission then
+						local ok, err = pcall(mode.Intermission, mode)
+						if not ok then ErrorNoHalt("[Z-City] " .. tostring(mode.name) .. " Intermission failed: " .. tostring(err) .. "\n") end
+					end
+					if mode.GiveEquipment then
+						local ok, err = pcall(mode.GiveEquipment, mode)
+						if not ok then ErrorNoHalt("[Z-City] " .. tostring(mode.name) .. " GiveEquipment failed: " .. tostring(err) .. "\n") end
+					end
 				end
 			end
-		end
 	end
 end
 
@@ -421,6 +495,19 @@ function zb.GetAvailableModes()
 			else
 				table.insert(newtbl, name)
 			end
+		end
+	end
+
+	-- Fallback: if random pool has < 2 modes, ensure hmcd is available to avoid
+	-- "same mode every round" on small maps where ForBigMaps modes are filtered out.
+	if #newtbl < 2 then
+		print("[Z-City] 警告: 可用随机模式少于 2 个 (" .. #newtbl .. ")，强制加入 hmcd 保证多样性")
+		if not table.HasValue(newtbl, "hmcd") and zb.modes.hmcd then
+			table.insert(newtbl, "hmcd")
+		end
+		-- If still only 1 mode, duplicate it to keep weighted random working
+		if #newtbl < 2 and newtbl[1] then
+			table.insert(newtbl, newtbl[1])
 		end
 	end
 
@@ -573,6 +660,17 @@ function zb.RerollChances()
 
 	for i = 1, 20 do
 		local round = zb.WeightedChanceMode(chances)
+		-- Avoid an accidental immediate duplicate when there is another valid
+		-- mode available. Manual/forced selections are still honored elsewhere.
+		if i == 1 and round == zb.CROUND and table.Count(chances) > 1 then
+			for _ = 1, 6 do
+				local alternative = zb.WeightedChanceMode(chances)
+				if alternative ~= zb.CROUND then
+					round = alternative
+					break
+				end
+			end
+		end
 
 		zb.RoundList[i] = round
 	end
@@ -610,7 +708,12 @@ end
 
 
 function zb.SetRoundList(newList)
-	local newLista = table.Copy(newList)
+	local newLista = {}
+	for _, key in ipairs(istable(newList) and newList or {}) do
+		if zb:IsKnownModeKey(key) then newLista[#newLista + 1] = key end
+	end
+	zb.manualNextRound = nil
+	zb.QueuedModes = {}
 	if #newLista > 0 then
 		zb.nextround = table.remove(newLista, 1)
 		zb.RoundList = newLista
@@ -693,15 +796,26 @@ function zb:RoundStart()
 	if mode.shouldfreeze then zb:Unfreeze() end
 
 	zb.ROUND_STATE = 1
-	zb.LAST_ROUNDSTART_TIME = CurTime()
+	local roundStartedAt = CurTime()
+	zb.LAST_ROUNDSTART_TIME = roundStartedAt
 	zb.START_TIME = nil
 
 	local mode, round = CurrentRound()
 
 	VFIRE_DISABLED = (mode.name == "coop")
 
-	zb.ROUND_BEGIN = CurTime()
-	hg.UpdateRoundTime()
+	-- Always reset the absolute timer at the real round start. Calling
+	-- UpdateRoundTime() without timestamps preserves the previous round's
+	-- ROUND_START and can make the new mode end immediately.
+	local roundBeginAt = roundStartedAt + (mode.start_time or 5)
+	zb.ROUND_BEGIN = roundBeginAt
+	if hg.UpdateRoundTime then
+		local okTime, errTime = pcall(hg.UpdateRoundTime, mode.ROUND_TIME or 300, roundStartedAt, roundBeginAt)
+		if not okTime then ErrorNoHalt("[Z-City] RoundStart timer reset failed: " .. tostring(errTime) .. "\n") end
+	else
+		zb.ROUND_TIME = mode.ROUND_TIME or 300
+		zb.ROUND_START = roundStartedAt
+	end
 
 	net.Start("RoundInfo")
 		net.WriteString(mode.name or "hmcd")
@@ -725,19 +839,53 @@ function zb:RoundStart()
 		end
 	end
 
-	local nextMode
+	-- 开局自愈：1 秒后若仍无任何玩家存活（模式复活逻辑中断的典型症状），
+	-- 强制复活所有非观战玩家，避免全员死亡被误判为平局而秒结束回合
+	timer.Simple(1, function()
+		if zb.ROUND_STATE ~= 1 then return end
+		local alive, total = 0, 0
+		for _, p in player.Iterator() do
+			if p:Team() == TEAM_SPECTATOR then continue end
+			total = total + 1
+			if p:Alive() then alive = alive + 1 end
+		end
+		if total > 0 and alive == 0 then
+			print("[Z-City] 警告: " .. tostring(zb.CROUND) .. " 开局无人存活(0/" .. total .. ")，执行强制复活")
+			for _, p in player.Iterator() do
+				if p:Team() != TEAM_SPECTATOR and not p:Alive() then
+					pcall(function() p:Spawn() end)
+				end
+			end
+		end
+	end)
 
-	if #zb.RoundList == 0 then
-		zb.RerollChances()
+	local nextMode
+	local forceKey = forcemodeconvar:GetString()
+	if forceKey ~= "" and forceKey ~= "random" and zb:IsKnownModeKey(forceKey) then
+		nextMode = forceKey
+	elseif zb.manualNextRound and zb:IsKnownModeKey(zb.manualNextRound) then
+		nextMode = zb.manualNextRound
+		zb.manualNextRound = nil
+	else
+		-- The legacy admin queue is consumed before the pre-rolled random list.
+		while #zb.QueuedModes > 0 and not nextMode do
+			local queued = table.remove(zb.QueuedModes, 1)
+			if zb:IsKnownModeKey(queued) then nextMode = queued end
+		end
+
+		while not nextMode do
+			if #zb.RoundList == 0 then zb.RerollChances() end
+			local candidate = table.remove(zb.RoundList, 1)
+			if not candidate then break end
+			if zb:IsKnownModeKey(candidate) then nextMode = candidate end
+		end
 	end
 
-	nextMode = table.remove(zb.RoundList, 1)
+	nextMode = nextMode or "hmcd"
+	print("Next game mode is " .. tostring(nextMode))
 
-	local currentMode = mode.Type or round
-
-	print("Next game mode is " .. nextMode)
-
-	NextRound(forcemode ~= "random" and forcemode or (nextMode or "hmcd"))
+	-- Internal scheduling must not overwrite a manually selected mode.
+	NextRound(nextMode, true)
 
 	if mode.RoundStartPost then
 		mode:RoundStartPost()
@@ -781,6 +929,10 @@ net.Receive("AdminSetGameMode", function(len, ply)
 	local addToQueue = net.ReadBool() or false
 
 	if command == "setmode" then
+		if not zb:IsKnownModeKey(modeKey) then
+			ply:ChatPrint("未知模式： " .. tostring(modeKey))
+			return
+		end
 		NextRound(modeKey)
 		ply:ChatPrint("游戏模式设置为：" .. modeKey)
 
@@ -791,16 +943,22 @@ net.Receive("AdminSetGameMode", function(len, ply)
 			zb.SyncQueueToAdmins()
 		end
 	elseif command == "setforcemode" then
-		forcemodeconvar:SetString(modeKey)
-		forcemode = modeKey
-
 		if modeKey == "random" then
+			forcemodeconvar:SetString("random")
+			forcemode = "random"
+			zb.manualNextRound = nil
 			ply:ChatPrint("强制模式已禁用")
 			net.Start("ZB_NotifyRoundListChange")
 				net.WriteString(ply:Nick())
 			net.Send(zb.GetAllAdmins())
 		else
-			NextRound(forcemode)
+			if not zb:IsKnownModeKey(modeKey) then
+				ply:ChatPrint("未知模式： " .. tostring(modeKey))
+				return
+			end
+			forcemodeconvar:SetString(modeKey)
+			forcemode = modeKey
+			NextRound(modeKey)
 			ply:ChatPrint("强制模式设置为：" .. modeKey)
 		end
 
@@ -898,7 +1056,7 @@ end
 COMMANDS.setmode = {
 	function(ply, args)
 		if not ply:IsAdmin() then ply:ChatPrint("你没有访问权限") return end
-		if not args[1] or (not zb:GetMode(args[1]) and args[1]~="random") then return end
+		if not args[1] or not zb:IsKnownModeKey(args[1]) then return end
 		ply:ChatPrint(args[1])
 		NextRound(args[1])
 	end,
@@ -908,11 +1066,14 @@ COMMANDS.setmode = {
 COMMANDS.setforcemode = {
 	function(ply, args)
 		if not ply:IsAdmin() then ply:ChatPrint("你没有访问权限") return end
-		if not args[1] or (not zb:GetMode(args[1]) and args[1]~="random") then return end
+		if not args[1] or (args[1] ~= "random" and not zb:IsKnownModeKey(args[1])) then return end
 		ply:ChatPrint(args[1])
 		forcemode = args[1]
 		if args[1] ~= "random" then
 			NextRound(args[1])
+		else
+			forcemodeconvar:SetString("random")
+			zb.manualNextRound = nil
 		end
 	end, 0
 }
@@ -956,6 +1117,14 @@ if SERVER then
 		local command = net.ReadString()
 		local modeKey = net.ReadString()
 		local addToQueue = net.ReadBool() or false
+		if command == "setforcemode" and modeKey == "random" then
+			forcemodeconvar:SetString("random")
+			forcemode = "random"
+			zb.manualNextRound = nil
+			ply:ChatPrint("强制模式已禁用")
+			zb.SyncForceModeToAdmins()
+			return
+		end
 
 		-- 安全解析：modeKey 可能是 Types 子键或无效键，直接索引 zb.modes 会对 nil 调方法导致切换静默失败
 		local resolvedKey = nil
@@ -976,6 +1145,7 @@ if SERVER then
 		end
 
 		local targetMode = zb.modes[resolvedKey]
+		local targetKey = zb:IsKnownModeKey(modeKey) and modeKey or resolvedKey
 
 		if not (ply:IsSuperAdmin() or ply:IsAdmin()) then
 			if not targetMode.CanLaunch or not targetMode:CanLaunch() then
@@ -985,7 +1155,7 @@ if SERVER then
 		end
 
 		if command == "setmode" then
-			NextRound(resolvedKey)
+			NextRound(targetKey)
 			ply:ChatPrint("游戏模式设置为：" .. modeKey)
 
 			if addToQueue then
@@ -995,15 +1165,15 @@ if SERVER then
 				zb.SyncQueueToAdmins()
 			end
 		elseif command == "setforcemode" then
-			forcemodeconvar:SetString(modeKey)
-			forcemode = modeKey
-
 			if modeKey == "random" then
+				forcemodeconvar:SetString("random")
+				forcemode = "random"
+				zb.manualNextRound = nil
 				ply:ChatPrint("强制模式已禁用")
 			else
-				if resolvedKey and zb.modes[resolvedKey] then
-					NextRound(resolvedKey)
-				end
+				forcemodeconvar:SetString(targetKey)
+				forcemode = targetKey
+				NextRound(targetKey)
 				PrintMessage(HUD_PRINTTALK, "[Z-City] 已开启强制模式: " .. modeKey .. "（之后每回合都将是该模式，F6 面板切换为 random 可解除）")
 				ply:ChatPrint("强制模式设置为：" .. modeKey)
 			end

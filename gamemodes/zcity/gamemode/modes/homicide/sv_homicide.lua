@@ -17,6 +17,9 @@ MODE.LootOnTime = true
 MODE.Chance = 0.2 -- this is mostly unused
 MODE.LootDivTime = 500
 
+-- 宽限期：homicide 需要角色选择+生成时间，设为 10 秒
+MODE.GracePeriod = 10
+
 function MODE:SetupChances()
 	for name, tbl in pairs(MODE.Types) do
 		zb.ModesChances[name] = zb.ModesChances[name] or tbl.Chance
@@ -1230,11 +1233,15 @@ function MODE:ShouldRoundEnd()
 		if(MODE.StartRoundTime > CurTime())then
 			return false
 		else
+			-- Role selection time expired; end the selection phase.
+			-- Player spawning is handled in RoundStart(), NOT here.
+			-- ShouldRoundEnd must not have side effects (spawning players).
 			MODE.StartRoundTime = nil
+			MODE.RoleChooseRound = false
 
 			net.Start("HMCD(EndPlayersRoleSelection)")
 			net.Broadcast()
-			MODE.SpawnPlayers(true)
+			return false -- Continue round, RoundStart will spawn players
 		end
 	else
 		local endround, winner = zb:CheckWinner(self:CheckAlivePlayers())
@@ -1377,6 +1384,8 @@ function MODE:EndRound()
 				end
 			end)
 		else
+			-- traitor 此前是未定义全局(恒为 nil)，导致凶手名字永远显示为空
+			local traitor = traitors[1]
 			if traitor and IsValid(traitor) then
 				--local CheckAlive = #self:CheckAlivePlayers()[1]
 				PrintMessage(HUD_PRINTTALK, self.Types[self.Type].Messages[winner]..(winner == 0 and (traitor:Alive() and " neutralized." or " killed.") or ""))
@@ -1512,6 +1521,12 @@ end)
 util.AddNetworkString("HMCD_UpdateTraitorAssistants")
 
 function MODE.SpawnPlayers(spawn_with_subroles)
+    -- 子模式键异常时回退，防止后续 Types[self.Type] 全线崩坏
+    if not MODE.Types[MODE.Type] then
+        ErrorNoHalt("[Z-City] hmcd 未知子模式 " .. tostring(MODE.Type) .. "，回退 standard\n")
+        MODE.Type = "standard"
+    end
+
     local gunner_found = false
 
     for i, ply in RandomPairs(player.GetAll()) do
@@ -1591,9 +1606,14 @@ function MODE.SpawnPlayers(spawn_with_subroles)
         if(current_ply:Team() != TEAM_SPECTATOR)then
             current_ply.SubRole = nil
 
-            ApplyAppearance(current_ply,nil,nil,nil,true)
+            -- 外观/出生点失败不允许中断整个复活循环，否则全员滞留死亡状态
+            if not pcall(ApplyAppearance, current_ply, nil, nil, nil, true) then
+                ErrorNoHalt("[Z-City] hmcd ApplyAppearance 失败(" .. tostring(current_ply) .. ")，已跳过外观\n")
+            end
             current_ply:Spawn()
-            current_ply:GetRandomSpawn()
+            if not pcall(current_ply.GetRandomSpawn, current_ply) then
+                ErrorNoHalt("[Z-City] hmcd GetRandomSpawn 失败(" .. tostring(current_ply) .. ")，使用默认出生点\n")
+            end
 
             if(!current_ply:Alive())then
                 continue
@@ -1636,11 +1656,19 @@ function MODE.SpawnPlayers(spawn_with_subroles)
                 end
             else
                 if(current_ply.isTraitor)then
-                    MODE.Types[MODE.Type].TraitorLoot(current_ply)
+                    local loot = MODE.Types[MODE.Type].TraitorLoot
+                    if loot then
+                        local okL, errL = pcall(loot, current_ply)
+                        if not okL then ErrorNoHalt("[Z-City] hmcd TraitorLoot 失败: " .. tostring(errL) .. "\n") end
+                    end
                 end
 
                 if(current_ply.isGunner)then
-                    MODE.Types[MODE.Type].GunManLoot(current_ply)
+                    local loot = MODE.Types[MODE.Type].GunManLoot
+                    if loot then
+                        local okG, errG = pcall(loot, current_ply)
+                        if not okG then ErrorNoHalt("[Z-City] hmcd GunManLoot 失败: " .. tostring(errG) .. "\n") end
+                    end
                 end
             end
             
