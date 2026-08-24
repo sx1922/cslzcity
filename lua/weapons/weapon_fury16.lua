@@ -1,0 +1,128 @@
+if SERVER then AddCSLuaFile() end
+SWEP.Base = "weapon_bandage_sh"
+SWEP.PrintName = "'Uber' Norepinephrine" -- '超级'去甲肾上腺素
+SWEP.Instructions = "一种从早期Fury-13样本中提炼的实验性战斗兴奋剂，来源不明，昵称为'Fury-16'。\n\n它不是修改你的身体，而是强迫身体燃烧所有资源以获得巨大的速度提升。通过向系统注入合成去甲肾上腺素，引起极端的血管收缩和心输出量增加。"
+SWEP.Category = "ZCity 药品"
+SWEP.Spawnable = true
+SWEP.Primary.Wait = 1
+SWEP.Primary.Next = 0
+SWEP.HoldType = "normal"
+SWEP.ViewModel = ""
+SWEP.WorldModel = "models/bloocobalt/l4d/items/w_eq_adrenaline.mdl"
+if CLIENT then
+	SWEP.WepSelectIcon = Material("entities/zcity/fury16.png")
+	SWEP.IconOverride = "entities/zcity/fury16.png"
+	SWEP.BounceWeaponIcon = false
+end
+SWEP.AdminOnly = true
+SWEP.AutoSwitchTo = false
+SWEP.AutoSwitchFrom = false
+SWEP.Slot = 5
+SWEP.SlotPos = 1
+SWEP.WorkWithFake = true
+SWEP.offsetVec = Vector(3, -2.5, -1)
+SWEP.offsetAng = Angle(-30, 20, -90)
+SWEP.ModelScale = 0.75
+SWEP.Color = Color(0, 90, 255)
+SWEP.modeNames = {
+	[1] = "fury-13"
+}
+
+function SWEP:InitializeAdd()
+	self:SetHold(self.HoldType)
+
+	self.modeValues = {
+		[1] = 1
+	}
+end
+
+SWEP.modeValuesdef = {
+	[1] = 1
+}
+
+SWEP.DeploySnd = ""
+SWEP.HolsterSnd = ""
+
+SWEP.showstats = false
+
+local hg_healanims = ConVarExists("hg_healanims") and GetConVar("hg_healanims") or CreateConVar("hg_healanims", 0, FCVAR_REPLICATED + FCVAR_ARCHIVE, "Toggle heal/food animations", 0, 1)
+
+function SWEP:Think()
+	self:SetBodyGroups("11")
+	if not self:GetOwner():KeyDown(IN_ATTACK) and hg_healanims:GetBool() then
+		self:SetHolding(math.max(self:GetHolding() - 4, 0))
+	end
+end
+
+function SWEP:Animation()
+	local hold = self:GetHolding()
+    self:BoneSet("r_upperarm", vector_origin, Angle(0, -hold + (100 * (hold / 100)), 0))
+    self:BoneSet("r_forearm", vector_origin, Angle(-hold / 6, -hold * 2, -15))
+end
+
+function SWEP:NPCHeal(npc, mul, snd)
+	if not npc then npc = self:GetOwner() end
+
+	if npc:IsNPC() then
+		self:SetHold("melee")
+		if not mul then mul = 0.3 end
+		npc:SetHealth(math.Clamp(npc:Health() + (npc:GetMaxHealth() * 1 * mul), 0, npc:GetMaxHealth() * math.Clamp(2 * mul, 2, 100)))
+		npc:EmitSound(snd or "snd_jack_hmcd_needleprick.wav", 80, math.random(95, 105))
+		npc:SetPlaybackRate(6)
+		npc:SetKeyValue("m_flPlaybackSpeed", 6)
+
+		if SERVER then
+			self:Remove()
+		end
+	end
+end
+
+function SWEP:OwnerChanged()
+	local owner = self:GetOwner()
+	if IsValid(owner) and owner:IsNPC() then
+		self:SpawnGarbage(nil, nil, nil, self.Color, "2211")
+		self:NPCHeal(owner, 20, "snd_jack_hmcd_needleprick.wav")
+	end
+end
+
+if SERVER then
+	function SWEP:Heal(ent, mode)
+		if ent:IsNPC() then
+			self:SpawnGarbage(nil, nil, nil, self.Color, "2211")
+			self:NPCHeal(ent, 20, "snd_jack_hmcd_needleprick.wav")
+		end
+
+		local org = ent.organism
+		if not org then return end
+
+		local owner = self:GetOwner()
+		if ent == hg.GetCurrentCharacter(owner) and hg_healanims:GetBool() then
+			self:SetHolding(math.min(self:GetHolding() + 4, 100))
+
+			if self:GetHolding() < 100 then return end
+		end
+
+		local entOwner = IsValid(owner.FakeRagdoll) and owner.FakeRagdoll or owner
+		entOwner:EmitSound("snd_jack_hmcd_needleprick.wav", 80, math.random(115, 120))
+
+		if org.berserk >= 0.4 then
+			hg.ExplodeHead(ent)
+		end
+
+		org.noradrenaline = org.noradrenaline + 1.25
+
+		self.modeValues[1] = 0
+
+		if self.poisoned2 then
+			org.poison4 = CurTime()
+
+			self.poisoned2 = nil
+		end
+
+		if self.modeValues[1] == 0 then
+			owner:SelectWeapon("weapon_hands_sh")
+			self:SpawnGarbage(nil, nil, nil, self.Color, "2211")
+			self:Remove()
+		end
+	end
+end

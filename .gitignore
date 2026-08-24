@@ -1,0 +1,11 @@
+# Self-made / external content excluded from repository (synced to server separately)
+SCP/
+card/
+.zcode/
+lua/autorun/*mission_intro*
+gamemodes/zcity/gamemode/modes/rxsend/
+
+# System / temp
+Thumbs.db
+Desktop.ini
+*.tmp
