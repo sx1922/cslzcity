@@ -1439,7 +1439,7 @@ function SWEP:PrimaryAttack(forcespecial)
 
 	self:UpdateNextIdle()
 
-	self:SetNextPrimaryFire(CurTime() + .35 * math.Clamp((180 - owner.organism.stamina[1]) / 90,1,2) + (math.max(special_attack and 0.5 or 0, clawClasses[owner.PlayerClassName] or 0)))
+	self:SetNextPrimaryFire(CurTime() + .35 * math.Clamp((180 - (owner.organism and owner.organism.stamina[1] or 180)) / 90,1,2) + (math.max(special_attack and 0.5 or 0, clawClasses[owner.PlayerClassName] or 0)))
 	self:SetNextSecondaryFire(CurTime() + .35 + (math.max(special_attack and 0.5 or 0, clawClasses[owner.PlayerClassName] or 0)))
 	self:SetLastShootTime(CurTime())
 
