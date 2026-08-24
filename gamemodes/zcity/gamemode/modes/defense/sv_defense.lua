@@ -19,6 +19,8 @@ MODE.LootSpawn = true
 MODE.ForBigMaps = true
 MODE.Chance = 0.02
 
+MODE.GracePeriod = 5
+
 local defenseDefaultPlayerSpawns = {
     "info_player_deathmatch", "info_player_combine", "info_player_rebel",
     "info_player_counterterrorist", "info_player_terrorist", "info_player_axis",

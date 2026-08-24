@@ -8,6 +8,8 @@ MODE.randomSpawns = true
 
 MODE.Chance = 0.00
 
+MODE.GracePeriod = 5
+
 util.AddNetworkString("scugarena_start")
 util.AddNetworkString("scugarena_end")
 

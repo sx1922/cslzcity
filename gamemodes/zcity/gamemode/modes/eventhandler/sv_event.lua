@@ -9,6 +9,8 @@ MODE.randomSpawns = true
 MODE.ForBigMaps = true
 MODE.Chance = 0
 
+MODE.GracePeriod = 5
+
 MODE.EndLogicType = 2 
 MODE.EventersList = {} 
 MODE.LootEnabled = false

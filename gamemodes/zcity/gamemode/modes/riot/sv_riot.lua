@@ -6,6 +6,8 @@ MODE.LootSpawn = false
 MODE.ForBigMaps = false
 MODE.Chance = 0.03
 
+MODE.GracePeriod = 5
+
 local riotWeapons = {
     "weapon_leadpipe",
     "weapon_brick",

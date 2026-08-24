@@ -7,6 +7,8 @@ MODE.LootSpawn = false
 
 MODE.ForBigMaps = true
 
+MODE.GracePeriod = 5
+
 function MODE:ClearPlayerRoles() -- Щпасибо деке!!
     for _, ply in player.Iterator() do
         ply:SetNWString("PlayerRole", "")

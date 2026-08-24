@@ -13,6 +13,8 @@ local coop_rts_zmb = CreateConVar("zb_coop_rts_zmb", "0", FCVAR_PROTECTED, "Togg
 
 MODE.LootSpawn = false
 
+MODE.GracePeriod = 5
+
 
 MODE.Lootables = {}
 for model, data in pairs(hg.loot_boxes or {}) do

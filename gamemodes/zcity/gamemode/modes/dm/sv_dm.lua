@@ -11,6 +11,8 @@ MODE.randomSpawns = true
 MODE.ForBigMaps = false
 MODE.Chance = 0.04
 
+MODE.GracePeriod = 5
+
 local radius = nil
 local mapsize = 7500
 -- MODE.MapSize = mapsize

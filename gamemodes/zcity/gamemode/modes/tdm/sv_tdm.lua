@@ -10,6 +10,8 @@ MODE.ROUND_TIME = 240
 
 MODE.Chance = 0.04
 
+MODE.GracePeriod = 5
+
 function MODE.GuiltCheck(Attacker, Victim, add, harm, amt)
 	return 1, true--returning true so guilt bans
 end

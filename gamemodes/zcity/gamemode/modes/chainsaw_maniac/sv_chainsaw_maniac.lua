@@ -1,5 +1,7 @@
 MODE.name = "chainsaw_maniac"
 
+MODE.GracePeriod = 5
+
 local MODE = MODE
 
 util.AddNetworkString("chainsaw_phase")

@@ -6,6 +6,8 @@ MODE.ROUND_TIME = 600
 
 MODE.Chance = 0.02
 
+MODE.GracePeriod = 5
+
 MODE.OverideSpawnPos = true
 MODE.LootSpawn = false
 

@@ -10,6 +10,8 @@ MODE.ROUND_TIME = 240
 
 MODE.ForBigMaps = false -- if it can launch, then it doesn't really matter
 
+MODE.GracePeriod = 5
+
 MODE.CooldownRounds = 5 -- 5 rounds of cs, 5 rounds without cs (at least 5)
 
 function MODE:ChanceFunction(info)

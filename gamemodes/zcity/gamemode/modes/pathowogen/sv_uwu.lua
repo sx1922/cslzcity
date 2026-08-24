@@ -10,6 +10,8 @@ MODE.LootSpawn = false
 MODE.ForBigMaps = true
 MODE.Chance = 0.05
 
+MODE.GracePeriod = 5
+
 MODE.randomSpawns = true
 
 MODE.LootOnTime = true

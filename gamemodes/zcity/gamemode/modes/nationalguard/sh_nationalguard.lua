@@ -8,6 +8,8 @@ MODE.GuiltDisabled = false
 MODE.ForBigMaps = true
 MODE.Chance = 0.02
 
+MODE.GracePeriod = 10
+
 MODE.ROUND_TIME = 900
 MODE.start_time = 15
 MODE.end_time = 10

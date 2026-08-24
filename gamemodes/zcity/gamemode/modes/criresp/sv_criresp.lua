@@ -7,6 +7,8 @@ MODE.Chance = 0.05
 MODE.start_time = 90
 MODE.end_time = 9
 
+MODE.GracePeriod = 10
+
 resource.AddFile("resource/fonts/Ethnocentric-Regular.ttf")
 
 local overlimit = CreateConVar("criresp_over20", 0, {FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_NOTIFY}, "Allow more than 20 players in Crisis Response", 0, 1)
