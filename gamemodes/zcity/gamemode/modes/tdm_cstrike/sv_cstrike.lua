@@ -107,8 +107,16 @@ function MODE:Intermission()
     if zb.rtype == "bomb" then
         timer.Simple(3,function()
             local team_t = team.GetPlayers(0)
+            -- T 队为空时回退到任意非观战玩家，防止 math.random(0) 报错导致炸弹永不生成、回合秒结束
+            if #team_t == 0 then
+                for _, p in ipairs(player.GetAll()) do
+                    if p:Team() ~= TEAM_SPECTATOR then team_t[#team_t + 1] = p end
+                end
+            end
+            if #team_t == 0 then return end
+
             local ply = team_t[math.random(#team_t)]
-            
+
             local ent = ents.Create("bomb")
             ent:SetPos(ply:EyePos())
             ent:Spawn()
@@ -120,6 +128,13 @@ function MODE:Intermission()
         timer.Simple(3,function()
             local ent = ents.Create("prop_ragdoll")
             local team_t = team.GetPlayers(0)
+            if #team_t == 0 then
+                for _, p in ipairs(player.GetAll()) do
+                    if p:Team() ~= TEAM_SPECTATOR then team_t[#team_t + 1] = p end
+                end
+            end
+            if #team_t == 0 then return end
+
             local ply = team_t[math.random(#team_t)]
 			--ent:SetModel("models/humans/group01/"..(math.random(2) == 1 and "fe" or "").."male_0"..math.random(9)..".mdl")
             ent:SetModel("models/player/hostage/hostage_0"..math.random(4)..".mdl")

@@ -53,6 +53,15 @@ MODE.SurvivorLoadout = {
 	flashlight = "weapon_hg_motiontracker",
 }
 
+function MODE.CanLaunch()
+	-- 人数不足时回退标准模式，避免 GiveEquipment 半途放弃导致队伍未分配、回合秒结束
+	local activePlayers = 0
+	for _, ply in player.Iterator() do
+		if ply:Team() ~= TEAM_SPECTATOR then activePlayers = activePlayers + 1 end
+	end
+	return activePlayers >= MODE.Config.MinPlayers
+end
+
 function MODE.GetRole(ply)
 	if not ply or not IsValid(ply) or ply == Entity(0) then return "none" end
 	local ok, result = pcall(function() return ply:GetNetVar("ManiacRole", "none") end)
