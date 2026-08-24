@@ -181,8 +181,6 @@ AddItemToBUY( ".38 Special (20)", "Ammo", "ent_ammo_.38special", 75, "弹药", {
 AddItemToBUY( ".40 Smith & Wesson (30)", "Ammo", "ent_ammo_.40sw", 75, "弹药", {}, 30)
 AddItemToBUY( ".44 Remington Magnum (20)", "Ammo", "ent_ammo_.44remingtonmagnum", 75, "弹药", {}, 20)
 
-AddItemToBUY( "Arrow", "Ammo", "ent_ammo_arrow", 25, "弹药", {}, 5)
-
 function MODE:HG_MovementCalc_2( mul, ply, cmd, mv )
     if (zb.ROUND_START or 0) + 20 > CurTime() and cmd then
         cmd:RemoveKey(IN_ATTACK)
