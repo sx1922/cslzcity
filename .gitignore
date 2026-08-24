@@ -9,3 +9,6 @@ gamemodes/zcity/gamemode/modes/rxsend/
 Thumbs.db
 Desktop.ini
 *.tmp
+
+# Corrupted font pending manual restore
+resource/fonts/unisans.ttf
