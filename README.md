@@ -9,7 +9,7 @@ Z-City 是一个 Garry's Mod 游戏模式插件：修改角色伤害与操作控
 - 多处稳定性修复（组织系统判空、计分板判空、出生自愈等）
 - 图集占位资源与自动下发脚本
 
-上游项目：https://github.com/uzelezz123/8bit_zcity
+上游项目：https://github.com/uzelezz123/Z-City
 （8bit 语音模块编译版已附带在 `lua/bin`，无需额外下载）
 
 客户端可选 Discord RPC 模块：
@@ -111,14 +111,3 @@ lua_run PrintTable(zb.RoundList)                     -- 应列出全部游戏模
 - `lua/autorun/*mission_intro*`
 - `gamemodes/zcity/gamemode/modes/rxsend/`
 - `resource/fonts/unisans.ttf`（HUD 字体，缺失仅影响字体美观）
-
-## 支持原作者
-
-**捐赠链接：**
-- [Yoomoney](https://yoomoney.ru/fundraise/17GFEQH326Q.250101)
-- [Boosty](https://boosty.to/sadsalat/donate)
-
-**加密货币：**
-- USDT(TRC20): TYgpaZgHQr6qEgemhHzVvV7AQESiyhHpZD
-- BTC(BTC): bc1qa8pk9ag6xa5yav2mvlxkra8xk25lg3htgfqh5w
-- ETH(ERC20)*: 0x72AdCCcCEB4E323C64bCF0955A779DD9298E9483
