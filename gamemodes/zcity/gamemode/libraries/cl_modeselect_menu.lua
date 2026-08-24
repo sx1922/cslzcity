@@ -237,7 +237,9 @@ if CLIENT then
         addBtn:SetText("+ 加入队列")
         ZcityBUTT(addBtn, COL_GREEN, COL_GREEN_H)
         addBtn.DoClick = function()
-            table.insert(zb.RoundList, mode.key)
+            -- 插到队列第 2 位（第 1 位是已确定的下一局）：
+            -- 原先是追加到队尾，会被最多 20 个预掷随机模式挡住，导致“加了没反应”
+            table.insert(zb.RoundList, math.min(2, #zb.RoundList + 1), mode.key)
             surface.PlaySound(SND_CLICK)
             manager:QueueUpdate()
         end

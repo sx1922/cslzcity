@@ -226,7 +226,9 @@ function zb:EndRoundThink()
 			if nextMode and nextMode.CanLaunch then
 				local ok, canLaunch = pcall(nextMode.CanLaunch, nextMode)
 				if not ok or canLaunch == false then
-					PrintMessage(HUD_PRINTTALK, "[Z-City] 当前地图/人数不满足该模式，已回退到标准模式。")
+					local failMsg = "[Z-City] 模式 " .. tostring(zb.CROUND) .. " 无法启动（地图点位/人数不满足），已回退到标准模式。"
+					PrintMessage(HUD_PRINTTALK, failMsg)
+					print(failMsg)
 					zb.CROUND = "hmcd"
 					zb.CROUND_MAIN = "hmcd"
 					zb.LASTCROUND = "hmcd"
