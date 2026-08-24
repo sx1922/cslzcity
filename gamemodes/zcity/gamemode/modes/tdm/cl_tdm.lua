@@ -350,7 +350,9 @@ local function OpenBuyMenu()
 	Sheet.tabScroller:DockMargin( 8, 0, 8, 0 )
 	Sheet:SetFadeTime(0.1)
 
-	for k,category in SortedPairsByMemberValue(MODE.BuyItems, "Priority") do
+	local buyMenuItems = (CurrentRound() and CurrentRound().BuyItems) or MODE.BuyItems
+
+	for k,category in SortedPairsByMemberValue(buyMenuItems, "Priority") do
 		local CategoryPanel = vgui.Create( "DScrollPanel", Sheet )
 		--CategoryPanel:Dock()
 		CategoryPanel.Paint = function() end
@@ -429,7 +431,7 @@ local function OpenBuyMenu()
 					amm:SetWidth(w + 7)
 					local ammo2 = "ent_ammo_"..hg.ammotypeshuy[ammo].name
 					local name
-					for name2, ammo in pairs(MODE.BuyItems["弹药"]) do
+					for name2, ammo in pairs(buyMenuItems["弹药"] or {}) do
 						if not istable(ammo) then continue end
 						if ammo.ItemClass == ammo2 then
 							name = name2
