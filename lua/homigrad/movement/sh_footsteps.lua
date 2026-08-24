@@ -58,7 +58,7 @@ local hg_coolcamera = ConVarExists("hg_coolcamera") and GetConVar("hg_coolcamera
 			local Hook = hook_Run("HG_PlayerFootstep", ply, pos, foot, sound, volume, rf)
 			if Hook then return Hook end
 
-			if !(ply:IsWalking() or ply:Crouching()) and ent == ply then
+			if !(ply:IsWalking() or ply:Crouching()) then
 				local snd
 				if ply.PlayerClassName == "furry" then
 					snd = "zbattle/footstep/hardbarefoot" .. math.random(1, 5) .. ".ogg"
@@ -68,7 +68,9 @@ local hg_coolcamera = ConVarExists("hg_coolcamera") and GetConVar("hg_coolcamera
 				if SoundDuration(snd) <= 0 or ply.PlayerClassName == "Gordon" then
 					snd = sound
 				end
-				EmitSound(snd, pos, ply:EntIndex(), CHAN_AUTO, volume, 75, nil, changePitch(math.random(95,105)) )
+				-- fake ragdoll 存活时角色实体是 ragdoll，从其位置发声而不是静音
+				local stepPos = (ent ~= ply and IsValid(ent)) and ent:GetPos() or pos
+				EmitSound(snd, stepPos, ply:EntIndex(), CHAN_AUTO, volume, 75, nil, changePitch(math.random(95,105)) )
 			end
 		end
 
