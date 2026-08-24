@@ -1,4 +1,5 @@
 if CLIENT then
+    print("[Z-City] cl_modeselect_menu v20260824 已加载 (队列插队修复)")
     local isMenuOpen = nil
     zb.availableModes = zb.availableModes or {}
 

@@ -496,6 +496,10 @@ function zb.GetWorldSize()
 	local dist = 0
 	local pts = zb.GetMapPoints( "RandomSpawns" )
 
+	-- 地图没有保存过 RandomSpawns 点位时视为不限大小：
+	-- 否则返回 0 会把所有 ForBigMaps 模式（tdm 等）从随机池中排除，导致每局都随机到同一批模式
+	if not pts or #pts < 2 then return math.huge end
+
 	for _, pnt in pairs(pts) do
 		for _, pnt2 in pairs(pts) do
 			dist = math.max(dist, pnt.pos:DistToSqr(pnt2.pos))
@@ -1019,3 +1023,27 @@ if SERVER then
 	end)
 
 end
+
+-- 回合系统版本标记：用于确认服务器实际加载的文件版本
+print("[Z-City] sv_roundsystem v20260824 已加载 (队列修复+诊断)")
+
+COMMANDS.zbdebug = {
+	function(ply, args)
+		local function out(s)
+			if IsValid(ply) then ply:ChatPrint(s) else print(s) end
+		end
+
+		out("[ZB-DEBUG] STATE=" .. tostring(zb.ROUND_STATE) .. " CROUND=" .. tostring(zb.CROUND) .. " CROUND_MAIN=" .. tostring(zb.CROUND_MAIN))
+		out("[ZB-DEBUG] nextround=" .. tostring(zb.nextround) .. " zb_forcemode=" .. tostring(forcemodeconvar and forcemodeconvar:GetString() or "?"))
+		out("[ZB-DEBUG] RoundList(" .. #(zb.RoundList or {}) .. "): " .. table.concat(zb.RoundList or {}, ", "))
+		local ws, bigmap = "err", "err"
+		local okWS, wsv = pcall(zb.GetWorldSize)
+		if okWS then ws = string.format("%.0f", wsv) end
+		bigmap = tostring(ws ~= "err" and (wsv > ZBATTLE_BIGMAP))
+		out("[ZB-DEBUG] WorldSize=" .. ws .. " BigMapThreshold=" .. tostring(ZBATTLE_BIGMAP) .. " isBig=" .. bigmap)
+		local avail = {}
+		local okAV, avtbl = pcall(zb.GetAvailableModes)
+		if okAV and istable(avtbl) then avail = avtbl end
+		out("[ZB-DEBUG] 可随机模式(" .. #avail .. "): " .. table.concat(avail, ", "))
+	end, 0
+}
