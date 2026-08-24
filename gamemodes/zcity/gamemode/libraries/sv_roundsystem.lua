@@ -85,15 +85,14 @@ function NextRound(round, internal)
 			if not internal then zb.manualNextRound = nil end
 			return false
 		end
-		local resolved = round and zb:GetMode(round)
-		if not resolved or not zb:IsKnownModeKey(round) then
+		if not round or not zb:IsKnownModeKey(round) then
 			print("[Z-City] ignored invalid next mode: " .. tostring(round))
 			return false
 		end
-		-- Store the resolved MAIN mode key (e.g., "hmcd" not "standard") so
-		-- transition logic in EndRoundThink doesn't get confused by sub-mode keys.
-		zb.nextround = resolved
-		if not internal then zb.manualNextRound = resolved end
+		-- Store the original key (main mode OR sub-mode like "standard").
+		-- CurrentRound() will resolve sub-mode keys via zb:GetMode().
+		zb.nextround = round
+		if not internal then zb.manualNextRound = round end
 		return true
 	end
 end
