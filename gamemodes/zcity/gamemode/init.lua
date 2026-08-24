@@ -441,6 +441,15 @@ function GM:PlayerInitialSpawn(ply)
 	end
 end
 
+-- 引擎菜单按键(F1-F4)转发给当前模式：tdm 的 F1 购买菜单此前从未被调用过
+local spareForwards = { "ShowHelp", "ShowTeam", "ShowSpare1", "ShowSpare2" }
+for _, fname in ipairs(spareForwards) do
+	GM[fname] = function(self, ply)
+		local m = CurrentRound()
+		if m and m[fname] then return m[fname](m, ply) end
+	end
+end
+
 function GM:IsSpawnpointSuitable( pl, spawnpointent, bMakeSuitable )
 	return true
 end

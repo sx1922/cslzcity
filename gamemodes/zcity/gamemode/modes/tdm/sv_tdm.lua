@@ -176,7 +176,8 @@ function MODE:PlayerDeath(ply)
 end
 util.AddNetworkString( "tdm_open_buymenu" )
 function MODE:ShowSpare1(ply ) -- OpenMenu
-	if not ply:Alive() then return end
+	if not ply:Alive() then ply:ChatPrint("[商店] 必须存活才能打开购买菜单。") return end
+	if ((zb.ROUND_START or 0) + 40 < CurTime()) then ply:ChatPrint("[商店] 购买时间已过（开局40秒内有效）。") return end
 	net.Start( "tdm_open_buymenu" )
 	net.Send( ply )
 end

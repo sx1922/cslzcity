@@ -1073,5 +1073,18 @@ COMMANDS.zbdebug = {
 		local okAV, avtbl = pcall(zb.GetAvailableModes)
 		if okAV and istable(avtbl) then avail = avtbl end
 		out("[ZB-DEBUG] 可随机模式(" .. #avail .. "): " .. table.concat(avail, ", "))
+		-- 商店诊断
+		local cur = CurrentRound()
+		out("[ZB-DEBUG] 当前模式商店: buymenu=" .. tostring(cur and cur.buymenu) .. " ShowSpare1=" .. tostring(cur and cur.ShowSpare1 ~= nil))
+		for mname, m in pairs(zb.modes) do
+			if m.BuyItems then
+				local total, cats = 0, 0
+				for _, items in pairs(m.BuyItems) do
+					cats = cats + 1
+					total = total + table.Count(items)
+				end
+				out("[ZB-DEBUG] 商店[" .. mname .. "]: " .. cats .. "类/" .. total .. "件")
+			end
+		end
 	end, 0
 }
