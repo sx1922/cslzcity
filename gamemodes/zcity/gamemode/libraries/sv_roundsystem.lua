@@ -25,6 +25,15 @@ function zb:GetMode(round)
 	return zb.modes.hmcd and "hmcd" or next(zb.modes)
 end
 
+-- 模式可通过 MODE.AllowedMaps = { ["地图名"] = true, ... } 限定仅在特定地图启动
+-- 空表或未定义 = 不限制地图
+function zb.IsMapAllowed(mode)
+	if not mode or not mode.AllowedMaps then return true end
+	if table.Count(mode.AllowedMaps) == 0 then return true end
+	local map = string.lower(game.GetMap())
+	return mode.AllowedMaps[map] == true or mode.AllowedMaps[game.GetMap()] == true
+end
+
 function CurrentRound()
 	if IsValid(ents.FindByClass( "trigger_changelevel" )[1]) then
 		zb.nextround = "coop"
@@ -229,17 +238,24 @@ function zb:EndRoundThink()
 			zb.CROUND = zb.nextround or "hmcd"
 			print(string.format("[Z-City] 回合切换: %s -> %s (nextround=%s)", tostring(prevRound), tostring(zb.CROUND), tostring(zb.nextround)))
 			local nextMode = CurrentRound()
+			local fallbackMsg
 			if nextMode and nextMode.CanLaunch then
 				local ok, canLaunch = pcall(nextMode.CanLaunch, nextMode)
 				if not ok or canLaunch == false then
-					local failMsg = "[Z-City] 模式 " .. tostring(zb.CROUND) .. " 无法启动（地图点位/人数不满足），已回退到标准模式。"
-					PrintMessage(HUD_PRINTTALK, failMsg)
-					print(failMsg)
-					zb.CROUND = "hmcd"
-					zb.CROUND_MAIN = "hmcd"
-					zb.LASTCROUND = "hmcd"
-					nextMode = zb.modes.hmcd
+					fallbackMsg = "[Z-City] 模式 " .. tostring(zb.CROUND) .. " 无法启动（地图点位/人数不满足），已回退到标准模式。"
 				end
+			end
+			-- 地图白名单：模式声明了 AllowedMaps 且当前地图不在名单内时回退
+			if not fallbackMsg and nextMode and not zb.IsMapAllowed(nextMode) then
+				fallbackMsg = "[Z-City] 模式 " .. tostring(zb.CROUND) .. " 不支持当前地图(" .. game.GetMap() .. ")，已回退到标准模式。"
+			end
+			if fallbackMsg then
+				PrintMessage(HUD_PRINTTALK, fallbackMsg)
+				print(fallbackMsg)
+				zb.CROUND = "hmcd"
+				zb.CROUND_MAIN = "hmcd"
+				zb.LASTCROUND = "hmcd"
+				nextMode = zb.modes.hmcd
 			end
 			if nextMode and nextMode.shouldfreeze then zb:Freeze() end
 
@@ -393,7 +409,7 @@ function zb.GetAvailableModes()
 	for i, name in pairs(zb.GetModes()) do
 
 		local tbl = zb.modes[name]
-		if (tbl.CanLaunch and tbl:CanLaunch()) and
+		if zb.IsMapAllowed(tbl) and (tbl.CanLaunch and tbl:CanLaunch()) and
 		(
 			( not tbl.ForBigMaps ) or
 			( zb.GetWorldSize() > ZBATTLE_BIGMAP )
