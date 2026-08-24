@@ -146,9 +146,34 @@ function zb:ShouldRoundEnd()
 	-- 开局宽限期：等待异步出生/角色分配完成，避免空队伍在开局瞬间被误判为回合结束
 	if zb.LAST_ROUNDSTART_TIME and (CurTime() - zb.LAST_ROUNDSTART_TIME) < 3 then return false end
 
-	local shouldroundend = mode.ShouldRoundEnd and mode:ShouldRoundEnd()
+	-- pcall 保护：模式判定报错时不再每 tick 刷错，回退为超时兜底（与未定义时的原行为一致）
+	local ok, shouldroundend = true, nil
+	if mode.ShouldRoundEnd then
+		ok, shouldroundend = pcall(mode.ShouldRoundEnd, mode)
+		if not ok then
+			print("[Z-City] " .. tostring(zb.CROUND) .. " ShouldRoundEnd 报错: " .. tostring(shouldroundend))
+			shouldroundend = nil
+		end
+	end
+
 	if shouldroundend ~= false then
 		local boringround = (zb.ROUND_START + time) < CurTime()
+
+		if shouldroundend or boringround then
+			-- 诊断：打印结束原因与各队存活数，用于排查“自动结束”
+			local counts = {}
+			if zb.CheckAliveTeams then
+				local okT, tbl = pcall(zb.CheckAliveTeams, zb, true)
+				if okT and istable(tbl) then
+					for k, v in pairs(tbl) do counts[#counts + 1] = tostring(k) .. "=" .. #v end
+				end
+			end
+			print(string.format("[Z-City] 回合结束判定: 模式=%s 原因=%s 本局时长=%.0f秒 存活[%s]",
+				tostring(zb.CROUND),
+				(shouldroundend and "模式条件" or "超时"),
+				CurTime() - (zb.LAST_ROUNDSTART_TIME or CurTime()),
+				table.concat(counts, ", ")))
+		end
 
 		if boringround and mode.BoringRoundFunction then
 			PrintMessage(HUD_PRINTTALK, "因为太无聊，回合已终止。")

@@ -424,7 +424,8 @@ function GM:PlayerInitialSpawn(ply)
 	if #player.GetAll() == 1 then
 		RunConsoleCommand("bot")
 		hg.addbot = true
-		zb:EndRound()
+		-- 不再强制结束回合：首个玩家/机器人进服时 zb:EndRound() 会打断正常回合循环，
+		-- 造成每次换图后第一局被“自动结束”。低人数由 PreRound 的人数门槛自行处理。
 	end
 
 	if #player.GetHumans() > 1 and hg.addbot then
