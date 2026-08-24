@@ -51,7 +51,7 @@ end
 
 local function SendRoleState(ply)
 	if not IsValid(ply) then return end
-	local role = ply:GetNWVar("ManiacRole", "none") or "none"
+	local role = ply:GetNetVar("ManiacRole", "none") or "none"
 	local weaponClass = ply:GetNWString("ManiacWeaponClass", "")
 	net.Start("chainsaw_role")
 		net.WriteString(role)
@@ -146,7 +146,7 @@ local function BroadcastPhase(phase, phaseEnd)
 end
 
 local function SetupManiac(ply)
-	ply:SetNWVar("ManiacRole", "maniac")
+	ply:SetNetVar("ManiacRole", "maniac")
 	zb.GiveRole(ply, "电锯杀人魔", Color(180, 0, 0))
 	ply:SetNWInt("Maniac_MaxHealth", MODE.Config.ManiacHealth)
 	ply:SetHealth(MODE.Config.ManiacHealth)
@@ -166,7 +166,7 @@ local function SetupManiac(ply)
 end
 
 local function SetupSurvivor(ply)
-	ply:SetNWVar("ManiacRole", "survivor")
+	ply:SetNetVar("ManiacRole", "survivor")
 	zb.GiveRole(ply, "幸存者", Color(0, 150, 200))
 	GiveSurvivorLoadout(ply)
 end
@@ -189,7 +189,7 @@ function MODE:GiveEquipment()
 		if ply:Team() ~= TEAM_SPECTATOR then
 			players[#players + 1] = ply
 		else
-			ply:SetNWVar("ManiacRole", "none")
+			ply:SetNetVar("ManiacRole", "none")
 		end
 	end
 	table.Shuffle(players)

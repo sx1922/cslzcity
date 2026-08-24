@@ -81,7 +81,7 @@ MODE.Medicine = {"weapon_medkit_sh", "weapon_tourniquet"}
 
 function MODE.GetRole(ply)
 	if not ply or not IsValid(ply) or ply == Entity(0) then return "none" end
-	local ok, result = pcall(function() return ply:GetNWVar("VIPRole", "none") end)
+	local ok, result = pcall(function() return ply:GetNetVar("VIPRole", "none") end)
 	if ok then return result else return "none" end
 end
 

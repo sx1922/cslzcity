@@ -79,7 +79,7 @@ local function GetManiac()
 		if ply == Entity(0) then continue end
 		if not ply:IsPlayer() then continue end
 		if not ply:Alive() then continue end
-		local ok, val = pcall(function() return ply:GetNWVar("ManiacRole", "none") end)
+		local ok, val = pcall(function() return ply:GetNetVar("ManiacRole", "none") end)
 		if ok and val == "maniac" then
 			return ply
 		end
@@ -120,7 +120,7 @@ end
 local function DrawManiacHUD()
 	local lply = LocalPlayer()
 	if not IsValid(lply) then return end
-	local ok, role = pcall(function() return lply:GetNWVar("ManiacRole", "none") end)
+	local ok, role = pcall(function() return lply:GetNetVar("ManiacRole", "none") end)
 	if not ok or role ~= "maniac" then return end
 
 	local x, y = sw * 0.5, sh * 0.85
@@ -188,7 +188,7 @@ function MODE:HUDPaint()
 
 	local lply2 = LocalPlayer()
 	if IsValid(lply2) then
-		local ok2, role2 = pcall(function() return lply2:GetNWVar("ManiacRole", "none") end)
+		local ok2, role2 = pcall(function() return lply2:GetNetVar("ManiacRole", "none") end)
 		if ok2 and role2 == "maniac" then
 			DrawManiacHUD()
 		end

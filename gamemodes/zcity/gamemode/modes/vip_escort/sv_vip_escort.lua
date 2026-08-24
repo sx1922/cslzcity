@@ -103,7 +103,7 @@ local function SetVIPRole(ply, role, displayName, color)
 	MODE.saved = saved
 	saved.Roles = saved.Roles or {}
 	saved.Roles[ply] = role
-	ply:SetNWVar("VIPRole", role)
+	ply:SetNetVar("VIPRole", role)
 	if displayName then
 		zb.GiveRole(ply, displayName, color)
 	end

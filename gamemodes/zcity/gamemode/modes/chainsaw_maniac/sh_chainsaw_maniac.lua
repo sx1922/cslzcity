@@ -55,7 +55,7 @@ MODE.SurvivorLoadout = {
 
 function MODE.GetRole(ply)
 	if not ply or not IsValid(ply) or ply == Entity(0) then return "none" end
-	local ok, result = pcall(function() return ply:GetNWVar("ManiacRole", "none") end)
+	local ok, result = pcall(function() return ply:GetNetVar("ManiacRole", "none") end)
 	if ok then return result else return "none" end
 end
 

@@ -75,7 +75,7 @@ local function GetVIP()
 		if ply == Entity(0) then continue end
 		if not ply:IsPlayer() then continue end
 		if not ply:Alive() then continue end
-		local ok, val = pcall(function() return ply:GetNWVar("VIPRole", "none") end)
+		local ok, val = pcall(function() return ply:GetNetVar("VIPRole", "none") end)
 		if ok and val == "vip" then
 			return ply
 		end

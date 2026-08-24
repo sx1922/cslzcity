@@ -216,7 +216,7 @@ do
 	hook.Add("CalcMainActivity", "CalcMainActivity_ix", function(client, velocity)
 		if isPlayerAnim(client) then return end
 		local clientInfo = client:GetTable()
-		local forcedSequence = client:GetNW2Var("forcedSequence")
+		local forcedSequence = client.GetNW2Var and client:GetNW2Var("forcedSequence") or nil
 		if forcedSequence then
 			if client:GetSequence() ~= forcedSequence then client:SetCycle(0) end
 			return -1, forcedSequence

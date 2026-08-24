@@ -45,7 +45,7 @@ local function GetLocalRole()
 	if roleStateReceived then return myRole end
 	local lply = LocalPlayer()
 	if not IsValid(lply) then return "none" end
-	local ok, role = pcall(function() return lply:GetNWVar("NGRole", "none") end)
+	local ok, role = pcall(function() return lply:GetNetVar("NGRole", "none") end)
 	return ok and (role or "none") or "none"
 end
 
@@ -58,7 +58,7 @@ local function GetLocalTeam()
 	if roleStateReceived then return myTeam end
 	local lply = LocalPlayer()
 	if not IsValid(lply) then return 2 end
-	local ok, teamID = pcall(function() return lply:GetNWVar("NGTeam", 2) end)
+	local ok, teamID = pcall(function() return lply:GetNetVar("NGTeam", 2) end)
 	return ok and (isnumber(teamID) and teamID or 2) or 2
 end
 

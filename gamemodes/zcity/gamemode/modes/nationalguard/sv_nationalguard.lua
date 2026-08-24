@@ -137,7 +137,7 @@ local function SendRoleState(ply)
 	local roleName = MODE.GetRoleName and MODE.GetRoleName(role)
 		or MODE.RoleNames and MODE.RoleNames[role]
 		or "观察者"
-	local teamID = ply:GetNWVar("NGTeam", 2)
+	local teamID = ply:GetNetVar("NGTeam", 2)
 	if not isnumber(teamID) then teamID = 2 end
 
 	net.Start("ng_role")
@@ -213,8 +213,8 @@ end
 local function SetupGuard(ply, role)
 	MODE.saved.Roles = MODE.saved.Roles or {}
 	MODE.saved.Roles[ply] = role
-	ply:SetNWVar("NGRole", role)
-	ply:SetNWVar("NGTeam", 1)
+	ply:SetNetVar("NGRole", role)
+	ply:SetNetVar("NGTeam", 1)
 	ply:SetNWBool("IsCommander", role == "commander")
 	zb.GiveRole(ply, MODE.GetRoleName(role), Color(0, 100, 200))
 
@@ -248,8 +248,8 @@ end
 local function SetupRioter(ply, role)
 	MODE.saved.Roles = MODE.saved.Roles or {}
 	MODE.saved.Roles[ply] = role
-	ply:SetNWVar("NGRole", role)
-	ply:SetNWVar("NGTeam", 0)
+	ply:SetNetVar("NGRole", role)
+	ply:SetNetVar("NGTeam", 0)
 	ply:SetNWBool("IsCommander", false)
 	zb.GiveRole(ply, MODE.GetRoleName(role), Color(180, 50, 0))
 
@@ -301,8 +301,8 @@ function MODE:GiveEquipment()
 	local guardIdx, rioterIdx = 0, 0
 	for _, ply in ipairs(players) do
 		if ply:Team() == TEAM_SPECTATOR then
-			ply:SetNWVar("NGRole", "none")
-			ply:SetNWVar("NGTeam", 2)
+			ply:SetNetVar("NGRole", "none")
+			ply:SetNetVar("NGTeam", 2)
 			ply:SetNWBool("IsCommander", false)
 			SendRoleState(ply)
 		else
@@ -490,9 +490,9 @@ function MODE:PlayerDeath(victim, inflictor, attacker)
 	local saved = self.saved
 	if saved.winner then return end
 
-	if attacker and attacker:IsPlayer() and attacker:GetNWVar("NGTeam") == 1 and victim:GetNWVar("NGTeam") == 0 then
+	if attacker and attacker:IsPlayer() and attacker:GetNetVar("NGTeam") == 1 and victim:GetNetVar("NGTeam") == 0 then
 		saved.riotLevel = math.max(saved.riotLevel - 5, 0)
-	elseif attacker and attacker:IsPlayer() and attacker:GetNWVar("NGTeam") == 0 and victim:GetNWVar("NGTeam") == 1 then
+	elseif attacker and attacker:IsPlayer() and attacker:GetNetVar("NGTeam") == 0 and victim:GetNetVar("NGTeam") == 1 then
 		saved.riotLevel = math.min(saved.riotLevel + 8, 100)
 	end
 	BroadcastRiotLevel()
@@ -525,7 +525,7 @@ function MODE:EndRound()
 
 		for _, ply in player.Iterator() do
 			if ply:Team() ~= TEAM_SPECTATOR then
-				if ply:GetNWVar("NGTeam") == winner then
+				if ply:GetNetVar("NGTeam") == winner then
 					ply:GiveExp(math.random(150, 200))
 					ply:GiveSkill(math.Rand(0.2, 0.3))
 				else
@@ -613,8 +613,8 @@ hook.Add("PlayerUse", "NG_Arrest", function(ply, ent)
 	end
 	if not MODE.Config.ArrestEnabled then return end
 	if not IsValid(ent) or not ent:IsPlayer() then return end
-	if ply:GetNWVar("NGTeam") ~= 1 then return end
-	if ent:GetNWVar("NGTeam") ~= 0 then return end
+	if ply:GetNetVar("NGTeam") ~= 1 then return end
+	if ent:GetNetVar("NGTeam") ~= 0 then return end
 	if ent:GetNWBool("Arrested", false) then return end
 	if not ply:HasWeapon("weapon_handcuffs") then return end
 	if not ply:KeyDown(IN_SPEED) then return end
