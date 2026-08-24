@@ -219,7 +219,9 @@ function zb:EndRoundThink()
 			hook.Run("ZB_PreRoundStart")
 			hook.Run("TTTPrepareRound") -- stormfox2 random_round_weather
 
+			local prevRound = zb.CROUND
 			zb.CROUND = zb.nextround or "hmcd"
+			print(string.format("[Z-City] 回合切换: %s -> %s (nextround=%s)", tostring(prevRound), tostring(zb.CROUND), tostring(zb.nextround)))
 			local nextMode = CurrentRound()
 			if nextMode and nextMode.CanLaunch then
 				local ok, canLaunch = pcall(nextMode.CanLaunch, nextMode)
@@ -672,8 +674,12 @@ function zb:RoundStart()
 		net.WriteInt(zb.ROUND_STATE, 4)
 	net.Broadcast()
 
-	if forcemodeconvar:GetString() != "" then
+	if forcemodeconvar:GetString() != "" and forcemodeconvar:GetString() ~= "random" then
 		forcemode = forcemodeconvar:GetString()
+		-- 强制模式生效提示：避免“每回合都是同一个模式”却无人知晓原因
+		PrintMessage(HUD_PRINTTALK, "[Z-City] 本回合为强制模式: " .. tostring(forcemode) .. "（F6 面板切回 random 可解除）")
+	elseif forcemodeconvar:GetString() == "random" then
+		forcemode = "random"
 	end
 
 	zb.AddCurrentModePlayed()
@@ -917,13 +923,35 @@ if SERVER then
 		local modeKey = net.ReadString()
 		local addToQueue = net.ReadBool() or false
 
-		if !(ply:IsSuperAdmin() or ply:IsAdmin()) and not zb.modes[modeKey]:CanLaunch() then
-			ply:ChatPrint("此模式无法启动（无点数或被禁用）： " .. modeKey)
+		-- 安全解析：modeKey 可能是 Types 子键或无效键，直接索引 zb.modes 会对 nil 调方法导致切换静默失败
+		local resolvedKey = nil
+		if zb.modes[modeKey] then
+			resolvedKey = modeKey
+		else
+			for name, m in pairs(zb.modes) do
+				if m.Types and m.Types[modeKey] then
+					resolvedKey = name
+					break
+				end
+			end
+		end
+
+		if not resolvedKey then
+			ply:ChatPrint("未知模式： " .. tostring(modeKey))
 			return
 		end
 
+		local targetMode = zb.modes[resolvedKey]
+
+		if not (ply:IsSuperAdmin() or ply:IsAdmin()) then
+			if not targetMode.CanLaunch or not targetMode:CanLaunch() then
+				ply:ChatPrint("此模式无法启动（无点数或被禁用）： " .. modeKey)
+				return
+			end
+		end
+
 		if command == "setmode" then
-			NextRound(modeKey)
+			NextRound(resolvedKey)
 			ply:ChatPrint("游戏模式设置为：" .. modeKey)
 
 			if addToQueue then
@@ -939,7 +967,10 @@ if SERVER then
 			if modeKey == "random" then
 				ply:ChatPrint("强制模式已禁用")
 			else
-				NextRound(forcemode)
+				if resolvedKey and zb.modes[resolvedKey] then
+					NextRound(resolvedKey)
+				end
+				PrintMessage(HUD_PRINTTALK, "[Z-City] 已开启强制模式: " .. modeKey .. "（之后每回合都将是该模式，F6 面板切换为 random 可解除）")
 				ply:ChatPrint("强制模式设置为：" .. modeKey)
 			end
 
