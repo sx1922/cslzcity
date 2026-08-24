@@ -333,7 +333,8 @@ local function OpenBuyMenu()
 		TDM_OpenedBuyMenu = nil
 	end
 	local StartTime = zb.ROUND_START or CurTime()
-	if not LocalPlayer():Alive() or StartTime + 40 < CurTime() then return end
+	if not LocalPlayer():Alive() then chat.AddText(Color(255,80,80), "[商店] 你必须存活才能打开购买菜单。") return end
+	if StartTime + 40 < CurTime() then chat.AddText(Color(255,80,80), "[商店] 购买时间已过（开局40秒内有效）。") return end
 	TDM_OpenedBuyMenu = vgui.Create("ZFrame")
 	local Frame = TDM_OpenedBuyMenu
 	Frame:SetSize(ScrW() * 0.35,ScrH() * 0.85)
