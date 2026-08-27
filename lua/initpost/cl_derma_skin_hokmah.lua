@@ -8,16 +8,7 @@
 --; Adapted from Helix
 
 --local hg_coolvetica = ConVarExists("hg_coolvetica") and GetConVar("hg_coolvetica") or CreateClientConVar("hg_coolvetica", "0", true, false, "changes every text to coolvetica because its good", 0, 1)
-local hg_font = ConVarExists("hg_font") and GetConVar("hg_font") or CreateClientConVar("hg_font", "Bahnschrift", true, false, "change every text font to selected because ui customization is cool")
-local font = function() -- hg_coolvetica:GetBool() and "Coolvetica" or "Bahnschrift"
-    local usefont = "Bahnschrift"
-
-    if hg_font:GetString() != "" then
-        usefont = hg_font:GetString()
-    end
-
-    return usefont
-end
+local font = hg.GetFont
 --//
 
 local gradient = surface.GetTextureID("vgui/gradient-d")

@@ -6,7 +6,6 @@ function hg.settings:AddOpt( strCategory, strConVar, strTitle, bDecimals, bStrin
     self.tbl[strCategory][strConVar] = { strCategory, strConVar, strTitle, bDecimals or false, bString or false, category }
 end
 local hg_firstperson_death = CreateClientConVar("hg_firstperson_death", "0", true, false, "Toggle first-person death camera view", 0, 1)
-local hg_font = CreateClientConVar("hg_font", "Bahnschrift", true, false, "change every text font to selected because ui customization is cool")
 local hg_attachment_draw_distance = CreateClientConVar("hg_attachment_draw_distance", 0, true, nil, "distance to draw attachments", 0, 4096)
 
 xbars = 17
@@ -18,15 +17,7 @@ local blur = Material("pp/blurscreen")
 local blur2 = Material("effects/shaders/zb_blur" )
 local sw, sh = ScrW(), ScrH()
 
-local font = function() -- hg_coolvetica:GetBool() and "Coolvetica" or "Bahnschrift"
-    local usefont = "Bahnschrift"
-
-    if hg_font:GetString() != "" then
-        usefont = hg_font:GetString()
-    end
-
-    return usefont
-end
+local font = hg.GetFont
 
 surface.CreateFont("ZCity_setiings_tiny", {
 	font = font(),
