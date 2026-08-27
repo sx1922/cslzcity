@@ -5,3 +5,6 @@
 /shaders
 /sound
 .vscode
+
+# 工作留痕，不上传仓库
+REFACTOR_LOG.md

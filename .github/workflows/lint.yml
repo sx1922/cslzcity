@@ -1,0 +1,30 @@
+name: Lua Lint
+
+on:
+  push:
+    branches: [ main, develop, refactor/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  luacheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.3 luarocks
+          sudo luarocks install luacheck
+      - name: Run luacheck
+        run: luacheck . --no-color --codes --no-unused-args --no-max-line-length || true
+      - name: Check Lua syntax
+        run: |
+          errors=0
+          for f in $(find . -name "*.lua" -not -path "*/.git/*"); do
+            if ! lua5.3 -p "$f" 2>/dev/null; then
+              echo "Syntax error: $f"
+              errors=$((errors + 1))
+            fi
+          done
+          [ $errors -eq 0 ]
