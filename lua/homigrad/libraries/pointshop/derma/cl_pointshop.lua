@@ -11,33 +11,6 @@ local function AltDonate()
     )
 end
 
-local blur = Material("pp/blurscreen")
-local hg_potatopc
-function hg.DrawBlur(panel, amount, passes, alpha)
-	if is3d2d then return end
-	amount = amount or 5
-	hg_potatopc = hg_potatopc or hg.ConVars.potatopc
-
-	if(hg_potatopc:GetBool())then
-		surface.SetDrawColor(0, 0, 0, alpha or (amount * 20))
-		surface.DrawRect(0, 0, panel:GetWide(), panel:GetTall())
-	else
-		surface.SetMaterial(blur)
-		surface.SetDrawColor(0, 0, 0, alpha or 125)
-		surface.DrawRect(0, 0, panel:GetWide(), panel:GetTall())
-
-		local x, y = panel:LocalToScreen(0, 0)
-
-		for i = -(passes or 0.2), 1, 0.2 do
-			blur:SetFloat("$blur", i * amount)
-			blur:Recompute()
-			
-			render.UpdateScreenEffectTexture()
-			surface.DrawTexturedRect(x * -1, y * -1, ScrW(), ScrH())
-		end
-	end
-end
-
 local PLUGIN = hg.PointShop
 
 local PANEL = {}

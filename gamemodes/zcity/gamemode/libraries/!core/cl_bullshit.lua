@@ -11,5 +11,3 @@ local colorBGBlacky = Color(40,40,40,255)
 
 local blurMat = Material("pp/blurscreen")
 local Dynamic = 0
-
-hg.BlurBackground = hg.DrawBlur

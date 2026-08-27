@@ -96,7 +96,8 @@ function hg.DrawBlur(panel, amount, passes, alpha)
 	-- surface.DrawRect(0, 0, panel:GetWide(), panel:GetTall())
 end
 
-BlurBackground = BlurBackground or hg.DrawBlur
+BlurBackground = hg.DrawBlur
+hg.BlurBackground = hg.DrawBlur
 
 local keydownattack
 local keydownattack2
