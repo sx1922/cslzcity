@@ -77,7 +77,7 @@ hg.ConVars = hg.ConVars or {}
 
 --\\ Holster think for weapons & automatic attack stuff
 	if CLIENT then
-		hook.Add("Player Think", "fucking bullshit", function(ply)
+		hook.Add("Player Think", "ZC_PlayerThink", function(ply)
 			local wep = ply:GetActiveWeapon()
 
 			if IsValid(wep) and wep.ismelee and ply != LocalPlayer() then
@@ -141,7 +141,7 @@ hg.ConVars = hg.ConVars or {}
 		hg.ClientsideModels = {}
 	end
 
-	hook.Add("PostCleanupMap","fuckclientsidemodels",hg.ClearClientsideModels)
+	hook.Add("PostCleanupMap","ZC_ClearClientsideModels",hg.ClearClientsideModels)
 	hook.Add("PostCleanupMap","remove_this_stupid_clside_ragdolls",function()
 		for k,v in ipairs(ents.FindByClass('class C_ClientRagdoll')) do v:Remove() end
 	end)

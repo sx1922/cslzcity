@@ -133,7 +133,7 @@ local RemoveGordonWeapons = {
     ["item_suit"] = true
 }
 
-hook.Add("EntityTakeDamage","dontfuckingdamagethem",function(ent,dmginfo)
+hook.Add("EntityTakeDamage","Coop_DamageBlock",function(ent,dmginfo)
     if CurrentRound().name == "coop" then
         local att = dmginfo:GetAttacker()
         if IsValid(ent) and IsValid(att) and att:IsPlayer() and ent:IsNPC() and ((ent:Disposition(att) == D_LI) or (ent:Disposition(att) == D_NU)) then

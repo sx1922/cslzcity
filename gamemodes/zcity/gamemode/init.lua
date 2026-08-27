@@ -500,7 +500,7 @@ function GM:EntityKeyValue( ent, key, value )
 		--[[
 		maps[ent] = true
 		
-		timer.Create("fuckmapchanges",4,1,function()
+		timer.Create("ZC_MapChangeTimer",4,1,function()
 			local random_player = table.Random(player.GetAll())
 			if not IsValid(random_player) then return end
 			local player_pos = random_player:GetPos()

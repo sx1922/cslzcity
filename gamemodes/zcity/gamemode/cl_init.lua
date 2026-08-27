@@ -103,7 +103,7 @@ local keydownattack
 local keydownattack2
 local keydownreload
 
-hook.Add("HUDPaint","FUCKINGSAMENAMEUSEDINHOOKFUCKME",function()
+hook.Add("HUDPaint","ZC_SpectatorHUD",function()
     if LocalPlayer():Alive() then return end
 	local spect = LocalPlayer():GetNWEntity("spect")
 	if not IsValid(spect) then return end
@@ -121,7 +121,7 @@ hook.Add("HUDPaint","FUCKINGSAMENAMEUSEDINHOOKFUCKME",function()
 	surface.DrawText(txt)
 end)
 
-hook.Add("HG_CalcView", "zzzzzzzUwU", function(ply, pos, angles, fov)
+hook.Add("HG_CalcView", "ZC_SpectatorCamera", function(ply, pos, angles, fov)
 	if not lply:Alive() then
 		if lply:KeyDown(IN_ATTACK) then
 			if not keydownattack then
@@ -257,7 +257,7 @@ end)
 
 zb.fade = zb.fade or 0
 
-hook.Add("RenderScreenspaceEffects", "huyhuyUwU", function()
+hook.Add("RenderScreenspaceEffects", "ZC_ScreenFade", function()
 	if zb.fade > 0 then
 		zb.fade = math.Approach(zb.fade, 0, FrameTime() * 1)
 
@@ -378,7 +378,7 @@ local function addToPlayerInfo(ply, muted, volume)
 end
 
 gameevent.Listen("player_connect")
-hook.Add("player_connect", "zcityhuy", function(data)
+hook.Add("player_connect", "ZC_PlayerConnect", function(data)
 	local ply = Player(data.userid)
 	if IsValid(ply) and ply.SetMuted and hg.playerInfo and hg.playerInfo[data.networkid] then
 		ply:SetMuted(hg.playerInfo[data.networkid][1])
@@ -386,7 +386,7 @@ hook.Add("player_connect", "zcityhuy", function(data)
 	end
 end)
 
-hook.Add("InitPostEntity", "furryhuy", function()
+hook.Add("InitPostEntity", "ZC_LoadPlayerInfo", function()
 	if file.Exists("zcity_muted.txt", "DATA") then
 		local json = file.Read("zcity_muted.txt", "DATA")
 

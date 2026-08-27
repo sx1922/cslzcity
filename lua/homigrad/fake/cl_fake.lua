@@ -631,7 +631,7 @@ hook.Add("PlayerInitialSpawn","asdfgacke",function(ply)
 	ply:SetNWVarProxy("FakeRagdoll", funcrag)
 end)
 
-hook.Add("InitPostEntity","fuckyou",function()
+hook.Add("InitPostEntity","ZC_FakeInit",function()
 	for i, ply in player.Iterator() do
 		ply:SetNWVarProxy("RagdollDeath",funcrag)
 		ply:SetNWVarProxy("FakeRagdoll", funcrag)
@@ -672,7 +672,7 @@ function hg.GetCurrentCharacter(ply)
 	return (IsValid(ply.FakeRagdoll) and ply.FakeRagdoll) or ply
 end
 
-hook.Add("Player Spawn", "fuckingremoveragdoll", function(ply)
+hook.Add("Player Spawn", "ZC_RemoveRagdoll", function(ply)
 	local ragdoll = ply:GetNWEntity("FakeRagdoll")
 	
 	if IsValid(ragdoll) then

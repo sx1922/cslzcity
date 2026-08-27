@@ -1,4 +1,4 @@
-﻿local PLAYER = FindMetaTable("Player")
+local PLAYER = FindMetaTable("Player")
 if not HookGetRagdollEntity then HookGetRagdollEntity = PLAYER.GetRagdollEntity end
 function PLAYER:GetRagdollEntity()
 	local ent = self:GetNWEntity("RagdollDeath")
@@ -479,7 +479,7 @@ end
 hg.queue_ragdolls = hg.queue_ragdolls or {}
 hg.humans_cached = hg.humans_cached or {}
 
-hook.Add("SetupPlayerVisibility", "fuckragdolls", function( ply )
+hook.Add("SetupPlayerVisibility", "ZC_RagdollPVS", function( ply )
 	local queue = hg.queue_ragdolls
 
 	for ent, tbl in pairs(queue) do--ему, наверное, больно
@@ -673,7 +673,7 @@ hook.Add("Should Fake Up","speedhuy",function(ply)
 	end
 end)
 
-hook.Add("Player Spawn", "fuckingremoveragdoll", function(ply)
+hook.Add("Player Spawn", "ZC_RemoveRagdoll", function(ply)
 	local ragdoll = ply:GetNWEntity("FakeRagdoll")
 	
 	if IsValid(ragdoll) then

@@ -1457,7 +1457,7 @@ function SWEP:CoreStep()
 	if SERVER then self:DrawAttachments() end
 end
 
-if SERVER then hook.Add("UpdateAnimation", "fuckgmodok", function(ply) ply:RemoveGesture(ACT_GMOD_NOCLIP_LAYER) end) end
+if SERVER then hook.Add("UpdateAnimation", "ZC_FixNoclipGesture", function(ply) ply:RemoveGesture(ACT_GMOD_NOCLIP_LAYER) end) end
 if CLIENT then
 	local nilTbl = {}
 	function SWEP:CustomAmmoDisplay()

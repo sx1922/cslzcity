@@ -1098,7 +1098,7 @@ else
 	MsgC(Color(255, 0, 0), "Eightbit module is not found! You are furry!\n")
 end
 
-hook.Add("InitPostEntity", "ffuckk", function()
+hook.Add("InitPostEntity", "ZC_InitPostEntity", function()
 	local perf = physenv.GetPerformanceSettings()
 	perf.MaxVelocity = 100000 -- default 2000
 	physenv.SetPerformanceSettings(perf)
